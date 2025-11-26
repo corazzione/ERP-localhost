@@ -1,0 +1,212 @@
+// Modelo de dados do ERP Unificado
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== USUÁRIOS E AUTENTICAÇÃO =====
+model Usuario {
+  id        String   @id @default(uuid())
+  nome      String
+  email     String   @unique
+  senha     String
+  role      String   @default("vendedor") // admin, gerente, vendedor
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+  
+  vendas    Venda[]
+}
+
+// ===== CADASTROS =====
+model Cliente {
+  id              String    @id @default(uuid())
+  nome            String
+  cpfCnpj         String    @unique
+  email           String?
+  telefone        String?
+  endereco        String?
+  cidade          String?
+  estado          String?
+  cep             String?
+  limiteCredito   Decimal   @default(0) @db.Decimal(10, 2)
+  saldoDevedor    Decimal   @default(0) @db.Decimal(10, 2)
+  ativo           Boolean   @default(true)
+  criadoEm        DateTime  @default(now())
+  
+  vendas          Venda[]
+  carnes          Carne[]
+  contasReceber   ContaReceber[]
+}
+
+model Fornecedor {
+  id        String   @id @default(uuid())
+  nome      String
+  cnpj      String   @unique
+  email     String?
+  telefone  String?
+  endereco  String?
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+  
+  contasPagar ContaPagar[]
+}
+
+model Produto {
+  id              String    @id @default(uuid())
+  codigo          String    @unique
+  nome            String
+  descricao       String?
+  categoria       String?
+  unidade         String    @default("UN")
+  precoVenda      Decimal   @db.Decimal(10, 2)
+  precoCusto      Decimal   @default(0) @db.Decimal(10, 2)
+  estoqueAtual    Int       @default(0)
+  estoqueMinimo   Int       @default(0)
+  ativo           Boolean   @default(true)
+  criadoEm        DateTime  @default(now())
+  
+  variacoes       ProdutoVariacao[]
+  movimentacoes   MovimentacaoEstoque[]
+  itensVenda      ItemVenda[]
+}
+
+model ProdutoVariacao {
+  id          String  @id @default(uuid())
+  produtoId   String
+  atributo    String  // cor, tamanho, etc
+  valor       String  // vermelho, G, etc
+  adicionalPreco Decimal @default(0) @db.Decimal(10, 2)
+  
+  produto     Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+}
+
+// ===== VENDAS =====
+model Venda {
+  id              String    @id @default(uuid())
+  numero          String    @unique
+  clienteId       String?
+  usuarioId       String
+  dataVenda       DateTime  @default(now())
+  subtotal        Decimal   @db.Decimal(10, 2)
+  desconto        Decimal   @default(0) @db.Decimal(10, 2)
+  total           Decimal   @db.Decimal(10, 2)
+  formaPagamento  String    // dinheiro, cartao_credito, cartao_debito, pix, boleto, crediario
+  statusPagamento String    @default("pendente") // pendente, pago, cancelado
+  status          String    @default("concluida") // orcamento, concluida, cancelada
+  observacoes     String?
+  
+  cliente         Cliente?  @relation(fields: [clienteId], references: [id])
+  usuario         Usuario   @relation(fields: [usuarioId], references: [id])
+  itens           ItemVenda[]
+  carne           Carne?
+}
+
+model ItemVenda {
+  id          String  @id @default(uuid())
+  vendaId     String
+  produtoId   String
+  quantidade  Int
+  precoUnit   Decimal @db.Decimal(10, 2)
+  subtotal    Decimal @db.Decimal(10, 2)
+  
+  venda       Venda   @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+  produto     Produto @relation(fields: [produtoId], references: [id])
+}
+
+// ===== CREDIÁRIO / CARNÊ =====
+model Carne {
+  id              String    @id @default(uuid())
+  vendaId         String    @unique
+  clienteId       String
+  numeroCarne     String    @unique
+  valorTotal      Decimal   @db.Decimal(10, 2)
+  valorOriginal   Decimal   @db.Decimal(10, 2) // valor sem juros
+  numParcelas     Int
+  taxaJuros       Decimal   @db.Decimal(5, 2) // % mensal
+  valorJuros      Decimal   @db.Decimal(10, 2) // total de juros
+  dataCriacao     DateTime  @default(now())
+  status          String    @default("ativo") // ativo, quitado, cancelado
+  
+  venda           Venda     @relation(fields: [vendaId], references: [id])
+  cliente         Cliente   @relation(fields: [clienteId], references: [id])
+  parcelas        Parcela[]
+}
+
+model Parcela {
+  id              String    @id @default(uuid())
+  carneId         String
+  numeroParcela   Int
+  dataVencimento  DateTime
+  valorParcela    Decimal   @db.Decimal(10, 2)
+  valorPago       Decimal   @default(0) @db.Decimal(10, 2)
+  dataPagamento   DateTime?
+  diasAtraso      Int       @default(0)
+  jurosMora       Decimal   @default(0) @db.Decimal(10, 2)
+  multaAtraso     Decimal   @default(0) @db.Decimal(10, 2)
+  status          String    @default("pendente") // pendente, pago, atrasado, cancelado
+  
+  carne           Carne     @relation(fields: [carneId], references: [id], onDelete: Cascade)
+}
+
+// ===== ESTOQUE =====
+model MovimentacaoEstoque {
+  id          String    @id @default(uuid())
+  produtoId   String
+  tipo        String    // entrada, saida, ajuste
+  quantidade  Int
+  motivo      String?
+  data        DateTime  @default(now())
+  
+  produto     Produto   @relation(fields: [produtoId], references: [id])
+}
+
+// ===== FINANCEIRO =====
+model ContaReceber {
+  id              String    @id @default(uuid())
+  clienteId       String?
+  descricao       String
+  valor           Decimal   @db.Decimal(10, 2)
+  dataVencimento  DateTime
+  dataPagamento   DateTime?
+  status          String    @default("pendente") // pendente, pago, atrasado, cancelado
+  categoria       String?
+  observacoes     String?
+  
+  cliente         Cliente?  @relation(fields: [clienteId], references: [id])
+}
+
+model ContaPagar {
+  id              String      @id @default(uuid())
+  fornecedorId    String?
+  descricao       String
+  valor           Decimal     @db.Decimal(10, 2)
+  dataVencimento  DateTime
+  dataPagamento   DateTime?
+  status          String      @default("pendente") // pendente, pago, atrasado, cancelado
+  categoria       String?
+  observacoes     String?
+  
+  fornecedor      Fornecedor? @relation(fields: [fornecedorId], references: [id])
+}
+
+model Caixa {
+  id          String   @id @default(uuid())
+  data        DateTime @default(now())
+  tipo        String   // abertura, fechamento, sangria, reforco
+  valor       Decimal  @db.Decimal(10, 2)
+  saldoAnterior Decimal @db.Decimal(10, 2)
+  saldoAtual  Decimal  @db.Decimal(10, 2)
+  observacoes String?
+  usuarioId   String?
+}
+
+// ===== CONFIGURAÇÕES =====
+model Configuracao {
+  id    String @id @default(uuid())
+  chave String @unique
+  valor String
+}
