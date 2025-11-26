@@ -33,6 +33,7 @@ model Cliente {
   estado          String?
   cep             String?
   limiteCredito   Decimal   @default(0) @db.Decimal(10, 2)
+  saldoCredito    Decimal   @default(0) @db.Decimal(10, 2)
   saldoDevedor    Decimal   @default(0) @db.Decimal(10, 2)
   ativo           Boolean   @default(true)
   criadoEm        DateTime  @default(now())

@@ -46,16 +46,21 @@ export const obterDadosDashboard = async (req, res) => {
 
         const totalPagarHoje = contasPagarHoje.reduce((sum, c) => sum + parseFloat(c.valor), 0);
 
-        // Produtos com estoque baixo
-        const produtosEstoqueBaixo = await prisma.produto.findMany({
-            where: {
-                ativo: true,
-                estoqueAtual: {
-                    lte: prisma.raw('estoque_minimo')
-                }
-            },
-            take: 10
+        // Total a receber (Crediário)
+        const totalCrediario = await prisma.cliente.aggregate({
+            _sum: {
+                saldoDevedor: true
+            }
         });
+        const totalCrediarioReceber = totalCrediario._sum.saldoDevedor || 0;
+
+        // Produtos com estoque baixo
+        const produtosEstoqueBaixo = await prisma.$queryRaw`
+            SELECT * FROM "Produto" 
+            WHERE ativo = true 
+            AND "estoqueAtual" <= "estoqueMinimo"
+            LIMIT 10
+        `;
 
         // Parcelas em atraso
         const parcelasAtrasadas = await prisma.parcela.findMany({
@@ -115,7 +120,8 @@ export const obterDadosDashboard = async (req, res) => {
             financeiro: {
                 receberHoje: totalVencendoHoje,
                 pagarHoje: totalPagarHoje,
-                saldoDia: totalVencendoHoje - totalPagarHoje
+                saldoDia: totalVencendoHoje - totalPagarHoje,
+                totalCrediario: totalCrediarioReceber
             },
             alertas: {
                 produtosEstoqueBaixo: produtosEstoqueBaixo.length,

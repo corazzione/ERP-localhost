@@ -2,7 +2,7 @@ import { prisma } from '../server.js';
 
 export const criarVenda = async (req, res) => {
     try {
-        const { clienteId, itens, desconto, formaPagamento, observacoes } = req.body;
+        const { clienteId, itens, desconto, formaPagamento, observacoes, usarCredito } = req.body;
         const usuarioId = req.userId;
 
         // Calcular totais
@@ -11,7 +11,9 @@ export const criarVenda = async (req, res) => {
             subtotal += item.quantidade * item.precoUnit;
         }
 
-        const total = subtotal - (desconto || 0);
+        const totalInicial = subtotal - (desconto || 0);
+        let totalPagar = totalInicial;
+        let creditoUsado = 0;
 
         // Gerar número da venda
         const ultimaVenda = await prisma.venda.findFirst({
@@ -22,8 +24,27 @@ export const criarVenda = async (req, res) => {
             ? String(parseInt(ultimaVenda.numero) + 1).padStart(8, '0')
             : '00000001';
 
-        // Criar venda com itens
+        // Criar venda com transação
         const venda = await prisma.$transaction(async (tx) => {
+            // 1. Verificar e usar crédito se solicitado
+            if (usarCredito && clienteId) {
+                const cliente = await tx.cliente.findUnique({ where: { id: clienteId } });
+                if (cliente && cliente.saldoCredito > 0) {
+                    creditoUsado = Math.min(parseFloat(cliente.saldoCredito), totalInicial);
+                    totalPagar = totalInicial - creditoUsado;
+
+                    // Deduzir do saldo do cliente
+                    await tx.cliente.update({
+                        where: { id: clienteId },
+                        data: { saldoCredito: { decrement: creditoUsado } }
+                    });
+                }
+            }
+
+            // 2. Processar pagamento e gerar parcelas se necessário
+            const statusPagamento = totalPagar <= 0 ? 'pago' : (formaPagamento === 'crediario' ? 'pendente' : 'pago');
+            const obsFinal = `${observacoes || ''} ${creditoUsado > 0 ? `(Crédito usado: R$ ${creditoUsado.toFixed(2)})` : ''}`.trim();
+
             const novaVenda = await tx.venda.create({
                 data: {
                     numero: numeroVenda,
@@ -31,10 +52,10 @@ export const criarVenda = async (req, res) => {
                     usuarioId,
                     subtotal,
                     desconto: desconto || 0,
-                    total,
-                    formaPagamento,
-                    statusPagamento: formaPagamento === 'crediario' ? 'pendente' : 'pago',
-                    observacoes,
+                    total: totalInicial,
+                    formaPagamento: totalPagar <= 0 ? 'credito_loja' : formaPagamento,
+                    statusPagamento,
+                    observacoes: obsFinal,
                     itens: {
                         create: itens.map(item => ({
                             produtoId: item.produtoId,
@@ -51,6 +72,50 @@ export const criarVenda = async (req, res) => {
                     cliente: true
                 }
             });
+
+            // Gerar Carnê/Parcelas se for Crediário e houver valor a pagar
+            if (formaPagamento === 'crediario' && totalPagar > 0 && clienteId) {
+                const numParcelas = req.body.numParcelas || 1;
+                const valorParcela = totalPagar / numParcelas;
+                const dataAtual = new Date();
+
+                // Criar Carnê
+                const carne = await tx.carne.create({
+                    data: {
+                        vendaId: novaVenda.id,
+                        clienteId,
+                        numeroCarne: numeroVenda,
+                        valorTotal: totalPagar,
+                        valorOriginal: totalPagar,
+                        numParcelas,
+                        taxaJuros: 0, // Implementar juros futuramente
+                        valorJuros: 0,
+                        status: 'ativo'
+                    }
+                });
+
+                // Criar Parcelas
+                for (let i = 1; i <= numParcelas; i++) {
+                    const dataVencimento = new Date(dataAtual);
+                    dataVencimento.setMonth(dataVencimento.getMonth() + i);
+
+                    await tx.parcela.create({
+                        data: {
+                            carneId: carne.id,
+                            numeroParcela: i,
+                            dataVencimento,
+                            valorParcela,
+                            status: 'pendente'
+                        }
+                    });
+                }
+
+                // Atualizar Saldo Devedor do Cliente
+                await tx.cliente.update({
+                    where: { id: clienteId },
+                    data: { saldoDevedor: { increment: totalPagar } }
+                });
+            }
 
             // Atualizar estoque
             for (const item of itens) {

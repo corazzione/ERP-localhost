@@ -18,6 +18,7 @@ function Layout({ setAuth }) {
                 <nav>
                     <ul className="sidebar-menu">
                         <li><Link to="/">📊 Dashboard</Link></li>
+                        <li><Link to="/pdv" className="text-positive font-bold">🏪 PDV (Caixa)</Link></li>
                         <li><Link to="/clientes">👥 Clientes</Link></li>
                         <li><Link to="/produtos">📦 Produtos</Link></li>
                         <li><Link to="/vendas">🛒 Vendas</Link></li>

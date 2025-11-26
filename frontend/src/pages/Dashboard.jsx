@@ -62,6 +62,13 @@ function Dashboard() {
                         R$ {dados?.financeiro?.pagarHoje?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
                     </div>
                 </div>
+
+                <div className="metric-card">
+                    <div className="metric-label">Total a Receber (Crediário)</div>
+                    <div className="metric-value" style={{ color: 'var(--color-warning-600)' }}>
+                        R$ {dados?.financeiro?.totalCrediario?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                    </div>
+                </div>
             </div>
 
             <div className="grid grid-cols-2 gap-6">

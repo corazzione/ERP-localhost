@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -161,7 +162,11 @@ function Clientes() {
                         <tbody>
                             {clientes.map((cliente) => (
                                 <tr key={cliente.id}>
-                                    <td className="font-semibold">{cliente.nome}</td>
+                                    <td className="font-medium">
+                                        <Link to={`/clientes/${cliente.id}`} className="text-primary-600 hover:underline">
+                                            {cliente.nome}
+                                        </Link>
+                                    </td>
                                     <td>{cliente.cpfCnpj}</td>
                                     <td>
                                         <div style={{ fontSize: '0.875rem' }}>
