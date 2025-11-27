@@ -1,4 +1,4 @@
-import { prisma } from '../server.js';
+import { prisma } from '../lib/prisma.js';
 
 export const obterDadosDashboard = async (req, res) => {
     try {
@@ -103,6 +103,13 @@ export const obterDadosDashboard = async (req, res) => {
 
         const topProdutosDetalhes = await Promise.all(
             topProdutos.map(async (item) => {
+                if (!item.produtoId) {
+                    return {
+                        produto: 'Produto Removido',
+                        quantidade: item._sum.quantidade,
+                        total: 0
+                    };
+                }
                 const produto = await prisma.produto.findUnique({
                     where: { id: item.produtoId }
                 });
@@ -134,10 +141,48 @@ export const obterDadosDashboard = async (req, res) => {
                 parcelasAtrasadas: parcelasAtrasadas.length,
                 valorAtrasado: totalParcelasAtrasadas
             },
-            topProdutos: topProdutosDetalhes
+            topProdutos: topProdutosDetalhes,
+            graficoVendas: await obterDadosGraficoVendas(primeiroDiaMes, ultimoDiaMes)
         });
     } catch (error) {
         console.error('Erro no dashboard:', error);
         res.status(500).json({ error: 'Erro ao obter dados do dashboard' });
     }
 };
+
+async function obterDadosGraficoVendas(inicio, fim) {
+    const vendas = await prisma.venda.groupBy({
+        by: ['dataVenda'],
+        where: {
+            dataVenda: {
+                gte: inicio,
+                lte: fim
+            },
+            status: 'concluida'
+        },
+        _sum: {
+            total: true
+        }
+    });
+
+    // Agrupar por dia (YYYY-MM-DD)
+    const vendasPorDia = {};
+    vendas.forEach(v => {
+        const dia = v.dataVenda.toISOString().split('T')[0];
+        vendasPorDia[dia] = (vendasPorDia[dia] || 0) + parseFloat(v._sum.total || 0);
+    });
+
+    // Preencher dias vazios
+    const dadosGrafico = [];
+    const current = new Date(inicio);
+    while (current <= fim) {
+        const dia = current.toISOString().split('T')[0];
+        dadosGrafico.push({
+            data: dia.split('-').reverse().slice(0, 2).join('/'), // DD/MM
+            valor: vendasPorDia[dia] || 0
+        });
+        current.setDate(current.getDate() + 1);
+    }
+
+    return dadosGrafico;
+}

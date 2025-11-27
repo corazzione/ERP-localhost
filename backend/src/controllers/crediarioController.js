@@ -1,4 +1,4 @@
-import { prisma } from '../server.js';
+import { prisma } from '../lib/prisma.js';
 import { calcularParcelas, calcularQuitacaoAntecipada, calcularJurosMora } from '../services/crediarioService.js';
 
 export const criarCarne = async (req, res) => {

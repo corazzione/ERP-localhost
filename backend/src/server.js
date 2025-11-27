@@ -23,7 +23,7 @@ import pedidoCompraRoutes from './routes/pedidoCompraRoutes.js';
 dotenv.config();
 
 const app = express();
-export const prisma = new PrismaClient();
+import { prisma } from './lib/prisma.js';
 
 // Middlewares de segurança
 app.use(cors({

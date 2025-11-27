@@ -94,6 +94,21 @@ Sistema ERP completo para gestão empresarial com foco em:
 
 ---
 
+---
+
+## 📸 Demonstração
+
+### Dashboard
+![Dashboard](/C:/Users/coraz/.gemini/antigravity/brain/9ad1c278-2170-449d-8419-84659cb56e43/dashboard_view_1764207380424.png)
+
+### Produtos
+![Lista de Produtos](/C:/Users/coraz/.gemini/antigravity/brain/9ad1c278-2170-449d-8419-84659cb56e43/products_list_1764207387133.png)
+
+### PDV (Vendas)
+![Venda Realizada](/C:/Users/coraz/.gemini/antigravity/brain/9ad1c278-2170-449d-8419-84659cb56e43/pdv_sale_success_1764207691050.png)
+
+---
+
 ## 🛠️ Tecnologias
 
 ### Backend
@@ -173,7 +188,7 @@ Acesse: **http://localhost:5173**
 ### Login Padrão
 ```
 Email: admin@erp.com
-Senha: admin123
+Senha: senha123
 ```
 
 > ⚠️ **Importante:** Altere as credenciais padrão em produção!
