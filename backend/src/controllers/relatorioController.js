@@ -204,3 +204,111 @@ export const relatorioCrediario = async (req, res) => {
         res.status(500).json({ error: 'Erro ao gerar relatório de crediário' });
     }
 };
+
+// GET /relatorios/vendas-por-vendedor
+export const relatorioVendasPorVendedor = async (req, res) => {
+    try {
+        const { dataInicio, dataFim } = req.query;
+
+        const inicio = dataInicio ? new Date(dataInicio) : new Date(new Date().setDate(1));
+        const fim = dataFim ? new Date(dataFim) : new Date();
+
+        const vendas = await prisma.venda.findMany({
+            where: {
+                dataVenda: { gte: inicio, lte: fim },
+                status: 'concluida'
+            },
+            include: {
+                usuario: { select: { id: true, nome: true } }
+            }
+        });
+
+        // Agrupar por vendedor
+        const porVendedor = {};
+        vendas.forEach(v => {
+            const vendedorId = v.usuario.id;
+            if (!porVendedor[vendedorId]) {
+                porVendedor[vendedorId] = {
+                    vendedor: v.usuario.nome,
+                    quantidade: 0,
+                    faturamento: 0
+                };
+            }
+            porVendedor[vendedorId].quantidade++;
+            porVendedor[vendedorId].faturamento += parseFloat(v.total);
+        });
+
+        const dados = Object.values(porVendedor).sort((a, b) => b.faturamento - a.faturamento);
+
+        res.json({
+            periodo: { inicio, fim },
+            vendedores: dados
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao gerar relatório por vendedor' });
+    }
+};
+
+// GET /relatorios/produtos-mais-vendidos
+export const relatorioProdutosMaisVendidos = async (req, res) => {
+    try {
+        const { dataInicio, dataFim, limit } = req.query;
+
+        const inicio = dataInicio ? new Date(dataInicio) : new Date(new Date().setDate(1));
+        const fim = dataFim ? new Date(dataFim) : new Date();
+        const limitNum = parseInt(limit) || 10;
+
+        const itensVenda = await prisma.itemVenda.groupBy({
+            by: ['produtoId'],
+            where: {
+                venda: {
+                    dataVenda: { gte: inicio, lte: fim },
+                    status: 'concluida'
+                }
+            },
+            _sum: {
+                quantidade: true,
+                subtotal: true
+            },
+            orderBy: {
+                _sum: {
+                    quantidade: 'desc'
+                }
+            },
+            take: limitNum
+        });
+
+        const produtos = await Promise.all(
+            itensVenda.map(async (item) => {
+                if (!item.produtoId) {
+                    return {
+                        produto: 'Produto Personalizado',
+                        quantidade: item._sum.quantidade,
+                        faturamento: item._sum.subtotal
+                    };
+                }
+
+                const produto = await prisma.produto.findUnique({
+                    where: { id: item.produtoId },
+                    select: { codigo: true, nome: true }
+                });
+
+                return {
+                    codigo: produto?.codigo || '-',
+                    produto: produto?.nome || 'Produto Removido',
+                    quantidade: item._sum.quantidade,
+                    faturamento: item._sum.subtotal
+                };
+            })
+        );
+
+        res.json({
+            periodo: { inicio, fim },
+            produtos
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao gerar relatório de produtos mais vendidos' });
+    }
+};

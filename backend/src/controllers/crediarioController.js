@@ -310,3 +310,100 @@ export const quitarCarne = async (req, res) => {
         res.status(500).json({ error: 'Erro ao quitar carnê' });
     }
 };
+
+// GET /crediario/resumo - KPIs gerais de crediário
+export const getResumo = async (req, res) => {
+    try {
+        // Total a receber (soma de parcelas pendentes)
+        const totalReceber = await prisma.parcela.aggregate({
+            where: { status: 'pendente' },
+            _sum: { valorParcela: true }
+        });
+
+        // Parcelas vencidas
+        const hoje = new Date();
+        const parcelasVencidas = await prisma.parcela.findMany({
+            where: {
+                status: 'pendente',
+                dataVencimento: { lt: hoje }
+            }
+        });
+
+        const totalVencido = parcelasVencidas.reduce((acc, p) => acc + parseFloat(p.valorParcela), 0);
+        const qtdVencidas = parcelasVencidas.length;
+
+        // Total de carnês ativos
+        const carnesAtivos = await prisma.carne.count({
+            where: { status: 'ativo' }
+        });
+
+        // Calcular inadimplência %
+        const todasParcelas = await prisma.parcela.count();
+        const inadimplencia = todasParcelas > 0 ? (qtdVencidas / todasParcelas) * 100 : 0;
+
+        res.json({
+            totalReceber: totalReceber._sum.valorParcela || 0,
+            totalVencido,
+            qtdVencidas,
+            carnesAtivos,
+            inadimplencia: inadimplencia.toFixed(2)
+        });
+    } catch (error) {
+        console.error('Erro ao obter resumo crediário:', error);
+        res.status(500).json({ error: 'Erro ao carregar resumo' });
+    }
+};
+
+// GET /crediario/parcelas - Lista consolidada de parcelas
+export const listarParcelas = async (req, res) => {
+    try {
+        const { status, clienteId, vencidas } = req.query;
+
+        const where = {};
+
+        // Filtro por status
+        if (status) {
+            where.status = status;
+        }
+
+        // Filtro por cliente
+        if (clienteId) {
+            where.carne = {
+                clienteId: clienteId
+            };
+        }
+
+        // Filtro por vencidas
+        if (vencidas === 'true') {
+            where.status = 'pendente';
+            where.dataVencimento = { lt: new Date() };
+        }
+
+        const parcelas = await prisma.parcela.findMany({
+            where,
+            include: {
+                carne: {
+                    include: {
+                        cliente: {
+                            select: {
+                                id: true,
+                                nome: true,
+                                telefone: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: {
+                dataVencimento: 'asc'
+            },
+            take: 100 // Limitar a 100 para performance
+        });
+
+        res.json(parcelas);
+    } catch (error) {
+        console.error('Erro ao listar parcelas:', error);
+        res.status(500).json({ error: 'Erro ao carregar parcelas' });
+    }
+};
+

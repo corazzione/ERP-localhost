@@ -30,7 +30,8 @@ function Produtos() {
     const carregarProdutos = async () => {
         try {
             const response = await api.get('/produtos');
-            setProdutos(response.data);
+            // Backend agora retorna { data: [], pagination: {} }
+            setProdutos(response.data.data || response.data);
         } catch (error) {
             console.error('Erro:', error);
             showToast('Erro ao carregar produtos', 'error');

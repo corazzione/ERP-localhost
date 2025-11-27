@@ -1,6 +1,7 @@
 import { prisma } from '../server.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { CONFIG, ERRORS } from '../constants.js';
 
 export const login = async (req, res) => {
     try {
@@ -11,23 +12,32 @@ export const login = async (req, res) => {
         });
 
         if (!usuario || !usuario.ativo) {
-            return res.status(401).json({ error: 'Credenciais inválidas' });
+            return res.status(401).json({ error: ERRORS.INVALID_CREDENTIALS });
         }
 
         const senhaValida = await bcrypt.compare(senha, usuario.senha);
 
         if (!senhaValida) {
-            return res.status(401).json({ error: 'Credenciais inválidas' });
+            return res.status(401).json({ error: ERRORS.INVALID_CREDENTIALS });
         }
 
+        // Token principal com expiração de 8 horas
         const token = jwt.sign(
             { userId: usuario.id, role: usuario.role },
             process.env.JWT_SECRET,
-            { expiresIn: '24h' }
+            { expiresIn: CONFIG.JWT.EXPIRATION }
+        );
+
+        // Refresh token com expiração de 7 dias
+        const refreshToken = jwt.sign(
+            { userId: usuario.id },
+            process.env.JWT_SECRET,
+            { expiresIn: CONFIG.JWT.REFRESH_EXPIRATION }
         );
 
         res.json({
             token,
+            refreshToken,
             usuario: {
                 id: usuario.id,
                 nome: usuario.nome,
@@ -36,7 +46,41 @@ export const login = async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ error: 'Erro no login' });
+        console.error('Erro no login:', error);
+        res.status(500).json({ error: ERRORS.SERVER_ERROR });
+    }
+};
+
+// Refresh token endpoint
+export const refresh = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(401).json({ error: 'Refresh token não fornecido' });
+        }
+
+        const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+
+        // Buscar usuário para verificar se ainda está ativo
+        const usuario = await prisma.usuario.findUnique({
+            where: { id: decoded.userId }
+        });
+
+        if (!usuario || !usuario.ativo) {
+            return res.status(401).json({ error: ERRORS.UNAUTHORIZED });
+        }
+
+        // Gerar novo token
+        const newToken = jwt.sign(
+            { userId: usuario.id, role: usuario.role },
+            process.env.JWT_SECRET,
+            { expiresIn: CONFIG.JWT.EXPIRATION }
+        );
+
+        res.json({ token: newToken });
+    } catch (error) {
+        return res.status(401).json({ error: 'Refresh token inválido' });
     }
 };
 

@@ -1,11 +1,16 @@
 import express from 'express';
-import { criarCarne, listarCarnes, buscarCarne, pagarParcela, simularQuitacao, quitarCarne } from '../controllers/crediarioController.js';
+import { criarCarne, listarCarnes, buscarCarne, pagarParcela, simularQuitacao, quitarCarne, getResumo, listarParcelas } from '../controllers/crediarioController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 router.use(authMiddleware);
 
+// Visão geral
+router.get('/resumo', getResumo);
+router.get('/parcelas', listarParcelas);
+
+// Carnês
 router.get('/carnes', listarCarnes);
 router.get('/carnes/:id', buscarCarne);
 router.post('/carnes', criarCarne);

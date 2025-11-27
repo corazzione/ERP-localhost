@@ -1,189 +1,233 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useToast } from '../components/Toast';
 
 function Crediario() {
-    const [carnes, setCarnes] = useState([]);
-    const [selectedCarne, setSelectedCarne] = useState(null);
-    const [simulacao, setSimulacao] = useState(null);
+    const navigate = useNavigate();
+    const { showToast } = useToast();
+
+    const [resumo, setResumo] = useState(null);
+    const [parcelas, setParcelas] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [filtro, setFiltro] = useState('todas'); // todas, vencidas, pendentes, pagas
 
     useEffect(() => {
-        carregarCarnes();
-    }, []);
+        carregarDados();
+    }, [filtro]);
 
-    const carregarCarnes = async () => {
+    const carregarDados = async () => {
         try {
-            const response = await api.get('/crediario/carnes');
-            setCarnes(response.data);
+            const [resumoRes, parcelasRes] = await Promise.all([
+                api.get('/crediario/resumo'),
+                api.get('/crediario/parcelas', {
+                    params: {
+                        vencidas: filtro === 'vencidas' ? 'true' : undefined,
+                        status: filtro === 'pagas' ? 'pago' : filtro === 'pendentes' ? 'pendente' : undefined
+                    }
+                })
+            ]);
+
+            setResumo(resumoRes.data);
+            setParcelas(parcelasRes.data);
         } catch (error) {
-            console.error('Erro:', error);
+            showToast('Erro ao carregar dados', 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    const simularQuitacao = async (carneId) => {
+    const pagarParcela = async (parcelaId) => {
+        if (!window.confirm('Confirma o pagamento desta parcela?')) return;
+
         try {
-            const response = await api.get(`/crediario/carnes/${carneId}/simular-quitacao`);
-            setSimulacao(response.data);
+            await api.post(`/crediario/parcelas/${parcelaId}/pagar`, {
+                dataPagamento: new Date().toISOString()
+            });
+            showToast('Parcela paga com sucesso', 'success');
+            carregarDados();
         } catch (error) {
-            console.error('Erro:', error);
+            showToast(error.response?.data?.error || 'Erro ao pagar parcela', 'error');
         }
     };
 
-    const quitarCarne = async (carneId) => {
-        if (!confirm('Confirma a quitação antecipada deste carnê?')) return;
-
-        try {
-            await api.post(`/crediario/carnes/${carneId}/quitar`);
-            alert('Carnê quitado com sucesso!');
-            setSimulacao(null);
-            carregarCarnes();
-        } catch (error) {
-            alert('Erro ao quitar carnê');
-        }
+    const verDetalhesCliente = (clienteId) => {
+        navigate(`/clientes/${clienteId}`);
     };
+
+    const getStatusBadge = (parcela) => {
+        if (parcela.status === 'pago') return 'badge-positive';
+
+        const hoje = new Date();
+        const vencimento = new Date(parcela.dataVencimento);
+
+        if (vencimento < hoje) return 'badge-negative';
+        return 'badge-warning';
+    };
+
+    const getStatusLabel = (parcela) => {
+        if (parcela.status === 'pago') return 'Pago';
+
+        const hoje = new Date();
+        const vencimento = new Date(parcela.dataVencimento);
+
+        if (vencimento < hoje) return 'Vencida';
+        return 'Pendente';
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center p-8">
+                <div className="text-center">
+                    <div className="spinner"></div>
+                    <p className="mt-4">Carregando dados do crediário...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div>
             <div className="page-header">
-                <h1 className="page-title">Crediário</h1>
-                <p style={{ color: 'var(--color-neutral-500)' }}>Gestão de carnês e vendas a prazo</p>
+                <div>
+                    <h1 className="page-title">💳 Gestão de Crediário</h1>
+                    <p style={{ color: 'var(--color-neutral-500)' }}>
+                        Visão geral de carnês e parcelas a receber
+                    </p>
+                </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6 mb-6">
-                <div className="card">
-                    <h3 style={{ marginBottom: '1rem' }}>Carnês Ativos</h3>
-                    {loading ? <p>Carregando...</p> : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                            {carnes.filter(c => c.status === 'ativo').map((carne) => (
-                                <div key={carne.id} className="card" style={{ padding: '1rem', cursor: 'pointer' }}
-                                    onClick={() => {
-                                        setSelectedCarne(carne);
-                                        simularQuitacao(carne.id);
-                                    }}>
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <div className="font-semibold">{carne.cliente.nome}</div>
-                                            <div className="text-sm" style={{ color: 'var(--color-neutral-500)' }}>
-                                                Carnê #{carne.numeroCarne}
-                                            </div>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div className="font-semibold text-warning">
-                                                R$ {parseFloat(carne.valorTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                            </div>
-                                            <div className="text-sm">{carne.numParcelas}x</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                            {carnes.filter(c => c.status === 'ativo').length === 0 && (
-                                <p className="text-sm" style={{ color: 'var(--color-neutral-500)' }}>
-                                    Nenhum carnê ativo
-                                </p>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {selectedCarne && simulacao && (
+            {/* KPIs */}
+            {resumo && (
+                <div className="grid grid-cols-4 gap-4 mb-6">
                     <div className="card">
-                        <h3 style={{ marginBottom: '1rem' }}>Simulação de Quitação Antecipada</h3>
-                        <div style={{ marginBottom: '1rem' }}>
-                            <div className="font-semibold">{selectedCarne.cliente.nome}</div>
-                            <div className="text-sm" style={{ color: 'var(--color-neutral-500)' }}>
-                                Carnê #{selectedCarne.numeroCarne}
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                            <div className="flex justify-between">
-                                <span>Valor original:</span>
-                                <span className="font-semibold">
-                                    R$ {parseFloat(selectedCarne.valorOriginal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Valor com juros:</span>
-                                <span className="font-semibold">
-                                    R$ {simulacao.valorSemDesconto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Parcelas restantes:</span>
-                                <span className="badge badge-warning">{simulacao.parcelasRestantes}</span>
-                            </div>
-                            <hr />
-                            <div className="flex justify-between items-center">
-                                <span className="font-semibold">Valor para quitar hoje:</span>
-                                <span className="font-bold" style={{ fontSize: '1.5rem', color: 'var(--color-positive-600)' }}>
-                                    R$ {simulacao.valorAQuitarHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span>Economia de juros:</span>
-                                <span className="font-semibold text-positive">
-                                    R$ {simulacao.descontoJuros.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({simulacao.economia})
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                            <button className="btn btn-positive" onClick={() => quitarCarne(selectedCarne.id)}>
-                                Quitar Carnê
-                            </button>
-                            <button className="btn btn-outline" onClick={() => {
-                                setSelectedCarne(null);
-                                setSimulacao(null);
-                            }}>
-                                Cancelar
-                            </button>
-                        </div>
-
-                        <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'var(--color-positive-50)', borderRadius: 'var(--radius-md)', fontSize: '0.875rem' }}>
-                            <strong>💡 Benefício CDC Art. 52, §2º:</strong> Ao quitar antecipadamente, você tem direito à redução proporcional dos juros das parcelas futuras.
+                        <div className="text-sm text-neutral-500">Total a Receber</div>
+                        <div className="text-2xl font-bold text-primary">
+                            R$ {parseFloat(resumo.totalReceber).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </div>
                     </div>
-                )}
+
+                    <div className="card">
+                        <div className="text-sm text-neutral-500">Parcelas Vencidas</div>
+                        <div className="text-2xl font-bold text-negative">
+                            {resumo.qtdVencidas}
+                        </div>
+                        <div className="text-sm text-neutral-500 mt-1">
+                            R$ {parseFloat(resumo.totalVencido).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <div className="text-sm text-neutral-500">Carnês Ativos</div>
+                        <div className="text-2xl font-bold text-warning">
+                            {resumo.carnesAtivos}
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <div className="text-sm text-neutral-500">Inadimplência</div>
+                        <div className="text-2xl font-bold" style={{
+                            color: parseFloat(resumo.inadimplencia) > 10 ? 'var(--color-negative-600)' : 'var(--color-positive-600)'
+                        }}>
+                            {resumo.inadimplencia}%
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Filtros */}
+            <div className="card mb-6">
+                <div className="flex gap-2">
+                    <button
+                        className={`btn ${filtro === 'todas' ? 'btn-primary' : 'btn-outline'}`}
+                        onClick={() => setFiltro('todas')}
+                    >
+                        Todas
+                    </button>
+                    <button
+                        className={`btn ${filtro === 'vencidas' ? 'btn-negative' : 'btn-outline'}`}
+                        onClick={() => setFiltro('vencidas')}
+                    >
+                        Vencidas
+                    </button>
+                    <button
+                        className={`btn ${filtro === 'pendentes' ? 'btn-warning' : 'btn-outline'}`}
+                        onClick={() => setFiltro('pendentes')}
+                    >
+                        Pendentes
+                    </button>
+                    <button
+                        className={`btn ${filtro === 'pagas' ? 'btn-positive' : 'btn-outline'}`}
+                        onClick={() => setFiltro('pagas')}
+                    >
+                        Pagas
+                    </button>
+                </div>
             </div>
 
+            {/* Tabela de Parcelas */}
             <div className="card">
-                <h3 style={{ marginBottom: '1rem' }}>Todos os Carnês</h3>
-                <table className="table">
-                    <thead>
-                        <tr>
-                            <th>Nº Carnê</th>
-                            <th>Cliente</th>
-                            <th>Data</th>
-                            <th>Valor Total</th>
-                            <th>Parcelas</th>
-                            <th>Taxa Juros</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {carnes.map((carne) => (
-                            <tr key={carne.id}>
-                                <td className="font-semibold">#{carne.numeroCarne}</td>
-                                <td>{carne.cliente.nome}</td>
-                                <td>{new Date(carne.dataCriacao).toLocaleDateString('pt-BR')}</td>
-                                <td className="font-semibold">
-                                    R$ {parseFloat(carne.valorTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </td>
-                                <td>{carne.numParcelas}x</td>
-                                <td>{parseFloat(carne.taxaJuros).toFixed(2)}%</td>
-                                <td>
-                                    <span className={`badge ${carne.status === 'ativo' ? 'badge-warning' :
-                                            carne.status === 'quitado' ? 'badge-positive' : ''
-                                        }`}>
-                                        {carne.status}
-                                    </span>
-                                </td>
+                <h3 className="mb-4">📋 Parcelas ({parcelas.length})</h3>
+
+                {parcelas.length === 0 ? (
+                    <div className="text-center py-8 text-neutral-500">
+                        Nenhuma parcela encontrada
+                    </div>
+                ) : (
+                    <table className="table">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Carnê</th>
+                                <th>Parcela</th>
+                                <th>Vencimento</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                                <th>Ações</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {parcelas.map(parcela => (
+                                <tr key={parcela.id}>
+                                    <td>
+                                        <button
+                                            className="text-primary hover:underline"
+                                            onClick={() => verDetalhesCliente(parcela.carne.cliente.id)}
+                                        >
+                                            {parcela.carne.cliente.nome}
+                                        </button>
+                                    </td>
+                                    <td className="font-mono text-sm">#{parcela.carne.numeroCarne}</td>
+                                    <td className="text-center">{parcela.numeroParcela}/{parcela.carne.numParcelas}</td>
+                                    <td>{new Date(parcela.dataVencimento).toLocaleDateString('pt-BR')}</td>
+                                    <td className="font-semibold">
+                                        R$ {parseFloat(parcela.valorParcela).toFixed(2)}
+                                    </td>
+                                    <td>
+                                        <span className={`badge ${getStatusBadge(parcela)}`}>
+                                            {getStatusLabel(parcela)}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {parcela.status === 'pendente' && (
+                                            <button
+                                                className="btn btn-sm btn-positive"
+                                                onClick={() => pagarParcela(parcela.id)}
+                                            >
+                                                💰 Pagar
+                                            </button>
+                                        )}
+                                        {parcela.status === 'pago' && (
+                                            <span className="text-sm text-neutral-500">
+                                                Pago em {new Date(parcela.dataPagamento).toLocaleDateString('pt-BR')}
+                                            </span>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
             </div>
         </div>
     );

@@ -1,15 +1,22 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { ToastProvider } from './components/Toast';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Clientes from './pages/Clientes';
+import ClienteDetalhes from './pages/ClienteDetalhes';
 import Produtos from './pages/Produtos';
 import Vendas from './pages/Vendas';
 import Crediario from './pages/Crediario';
 import Financeiro from './pages/Financeiro';
 import Relatorios from './pages/Relatorios';
 import PDV from './pages/PDV';
+import NovoOrcamento from './pages/NovoOrcamento';
+import Orcamentos from './pages/Orcamentos';
+import Pedidos from './pages/Pedidos';
+import PedidoDetalhes from './pages/PedidoDetalhes';
+import PedidosCompra from './pages/PedidosCompra';
 
 function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -26,30 +33,38 @@ function App() {
     }
 
     return (
-        <BrowserRouter>
-            <Routes>
-                <Route path="/login" element={
-                    isAuthenticated ? <Navigate to="/" /> : <Login setAuth={setIsAuthenticated} />
-                } />
+        <ToastProvider>
+            <BrowserRouter>
+                <Routes>
+                    <Route path="/login" element={
+                        isAuthenticated ? <Navigate to="/" /> : <Login setAuth={setIsAuthenticated} />
+                    } />
 
-                {/* Rota do PDV fora do Layout principal para ser tela cheia */}
-                <Route path="/pdv" element={
-                    isAuthenticated ? <PDV /> : <Navigate to="/login" />
-                } />
+                    {/* Rota do PDV fora do Layout principal para ser tela cheia */}
+                    <Route path="/pdv" element={
+                        isAuthenticated ? <PDV /> : <Navigate to="/login" />
+                    } />
 
-                <Route path="/" element={
-                    isAuthenticated ? <Layout setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
-                }>
-                    <Route index element={<Dashboard />} />
-                    <Route path="clientes" element={<Clientes />} />
-                    <Route path="produtos" element={<Produtos />} />
-                    <Route path="vendas" element={<Vendas />} />
-                    <Route path="crediario" element={<Crediario />} />
-                    <Route path="financeiro" element={<Financeiro />} />
-                    <Route path="relatorios" element={<Relatorios />} />
-                </Route>
-            </Routes>
-        </BrowserRouter>
+                    <Route path="/" element={
+                        isAuthenticated ? <Layout setAuth={setIsAuthenticated} /> : <Navigate to="/login" />
+                    }>
+                        <Route index element={<Dashboard />} />
+                        <Route path="clientes" element={<Clientes />} />
+                        <Route path="clientes/:id" element={<ClienteDetalhes />} />
+                        <Route path="produtos" element={<Produtos />} />
+                        <Route path="vendas" element={<Vendas />} />
+                        <Route path="crediario" element={<Crediario />} />
+                        <Route path="financeiro" element={<Financeiro />} />
+                        <Route path="relatorios" element={<Relatorios />} />
+                        <Route path="novo-orcamento" element={<NovoOrcamento />} />
+                        <Route path="orcamentos" element={<Orcamentos />} />
+                        <Route path="pedidos" element={<Pedidos />} />
+                        <Route path="pedidos/:id" element={<PedidoDetalhes />} />
+                        <Route path="pedidos-compra" element={<PedidosCompra />} />
+                    </Route>
+                </Routes>
+            </BrowserRouter>
+        </ToastProvider>
     );
 }
 

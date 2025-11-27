@@ -112,133 +112,93 @@ export const criarVenda = async (req, res) => {
 
                 // Atualizar Saldo Devedor do Cliente
                 await tx.cliente.update({
-                    where: { id: clienteId },
-                    data: { saldoDevedor: { increment: totalPagar } }
-                });
-            }
 
-            // Atualizar estoque
-            for (const item of itens) {
-                await tx.produto.update({
-                    where: { id: item.produtoId },
-                    data: {
-                        estoqueAtual: {
-                            decrement: item.quantidade
-                        }
+                    const where = {};
+
+                    if(dataInicio && dataFim) {
+                    where.dataVenda = {
+                        gte: new Date(dataInicio),
+                        lte: new Date(dataFim)
+                    };
+                }
+
+                if (status) {
+                    where.status = status;
+                }
+
+                const vendas = await prisma.venda.findMany({
+                    where,
+                    include: {
+                        cliente: { select: { nome: true } },
+                        usuario: { select: { nome: true } },
+                        itens: { include: { produto: { select: { nome: true } } } }
+                    },
+                    orderBy: { dataVenda: 'desc' },
+                    take: 100
+                });
+
+                res.json(vendas);
+            } catch (error) {
+                res.status(500).json({ error: 'Erro ao listar vendas' });
+            }
+        };
+
+        export const buscarVenda = async (req, res) => {
+            try {
+                const { id } = req.params;
+                const venda = await prisma.venda.findUnique({
+                    where: { id },
+                    include: {
+                        cliente: true,
+                        usuario: { select: { nome: true, email: true } },
+                        itens: { include: { produto: true } },
+                        carne: { include: { parcelas: true } }
                     }
                 });
 
-                // Registrar movimentação
-                await tx.movimentacaoEstoque.create({
-                    data: {
-                        produtoId: item.produtoId,
-                        tipo: 'saida',
-                        quantidade: item.quantidade,
-                        motivo: `Venda ${numeroVenda}`
+                if (!venda) {
+                    return res.status(404).json({ error: 'Venda não encontrada' });
+                }
+
+                res.json(venda);
+            } catch (error) {
+                res.status(500).json({ error: 'Erro ao buscar venda' });
+            }
+        };
+
+        export const cancelarVenda = async (req, res) => {
+            try {
+                const { id } = req.params;
+
+                const venda = await prisma.$transaction(async (tx) => {
+                    const vendaAtual = await tx.venda.findUnique({
+                        where: { id },
+                        include: { itens: true }
+                    });
+
+                    if (!vendaAtual) {
+                        throw new Error('Venda não encontrada');
                     }
-                });
-            }
 
-            return novaVenda;
-        });
-
-        res.status(201).json(venda);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erro ao criar venda' });
-    }
-};
-
-export const listarVendas = async (req, res) => {
-    try {
-        const { dataInicio, dataFim, status } = req.query;
-
-        const where = {};
-
-        if (dataInicio && dataFim) {
-            where.dataVenda = {
-                gte: new Date(dataInicio),
-                lte: new Date(dataFim)
-            };
-        }
-
-        if (status) {
-            where.status = status;
-        }
-
-        const vendas = await prisma.venda.findMany({
-            where,
-            include: {
-                cliente: { select: { nome: true } },
-                usuario: { select: { nome: true } },
-                itens: { include: { produto: { select: { nome: true } } } }
-            },
-            orderBy: { dataVenda: 'desc' },
-            take: 100
-        });
-
-        res.json(vendas);
-    } catch (error) {
-        res.status(500).json({ error: 'Erro ao listar vendas' });
-    }
-};
-
-export const buscarVenda = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const venda = await prisma.venda.findUnique({
-            where: { id },
-            include: {
-                cliente: true,
-                usuario: { select: { nome: true, email: true } },
-                itens: { include: { produto: true } },
-                carne: { include: { parcelas: true } }
-            }
-        });
-
-        if (!venda) {
-            return res.status(404).json({ error: 'Venda não encontrada' });
-        }
-
-        res.json(venda);
-    } catch (error) {
-        res.status(500).json({ error: 'Erro ao buscar venda' });
-    }
-};
-
-export const cancelarVenda = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const venda = await prisma.$transaction(async (tx) => {
-            const vendaAtual = await tx.venda.findUnique({
-                where: { id },
-                include: { itens: true }
-            });
-
-            if (!vendaAtual) {
-                throw new Error('Venda não encontrada');
-            }
-
-            // Devolver estoque
-            for (const item of vendaAtual.itens) {
-                await tx.produto.update({
-                    where: { id: item.produtoId },
-                    data: {
-                        estoqueAtual: { increment: item.quantidade }
+                    // Devolver estoque
+                    for (const item of vendaAtual.itens) {
+                        await tx.produto.update({
+                            where: { id: item.produtoId },
+                            data: {
+                                estoqueAtual: { increment: item.quantidade }
+                            }
+                        });
                     }
+
+                    // Cancelar venda
+                    return await tx.venda.update({
+                        where: { id },
+                        data: { status: 'cancelada', statusPagamento: 'cancelado' }
+                    });
                 });
+
+                res.json(venda);
+            } catch (error) {
+                res.status(500).json({ error: 'Erro ao cancelar venda' });
             }
-
-            // Cancelar venda
-            return await tx.venda.update({
-                where: { id },
-                data: { status: 'cancelada', statusPagamento: 'cancelado' }
-            });
-        });
-
-        res.json(venda);
-    } catch (error) {
-        res.status(500).json({ error: 'Erro ao cancelar venda' });
-    }
-};
+        };

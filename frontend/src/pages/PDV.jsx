@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { playSound } from '../utils/sounds';
+import printReceipt from '../utils/printReceipt';
 
 function PDV() {
     const navigate = useNavigate();
@@ -19,18 +21,47 @@ function PDV() {
     // Atalhos de teclado
     useEffect(() => {
         const handleKeyDown = (e) => {
+            // F2 - Ir para busca
             if (e.key === 'F2') {
                 e.preventDefault();
                 buscaInputRef.current?.focus();
+                playSound('beep');
             }
-            if (e.key === 'F5') {
+            // F3 - Finalizar venda
+            if (e.key === 'F3') {
                 e.preventDefault();
-                if (carrinho.length > 0) setShowPagamento(true);
+                if (carrinho.length > 0) {
+                    setShowPagamento(true);
+                    playSound('beep');
+                }
             }
+            // F4 - Limpar carrinho
+            if (e.key === 'F4') {
+                e.preventDefault();
+                if (carrinho.length > 0 && window.confirm('Limpar todo o carrinho?')) {
+                    setCarrinho([]);
+                    playSound('error');
+                }
+            }
+            // Ctrl+N - Nova venda (limpar)
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                if (carrinho.length === 0 || window.confirm('Iniciar nova venda? O carrinho atual será limpo.')) {
+                    setCarrinho([]);
+                    setBusca('');
+                    setShowPagamento(false);
+                    buscaInputRef.current?.focus();
+                    playSound('beep');
+                }
+            }
+            // Escape - Voltar/Sair
             if (e.key === 'Escape') {
                 e.preventDefault();
-                if (showPagamento) setShowPagamento(false);
-                else if (confirm('Sair do PDV?')) navigate('/');
+                if (showPagamento) {
+                    setShowPagamento(false);
+                } else if (window.confirm('Sair do PDV?')) {
+                    navigate('/');
+                }
             }
         };
 
@@ -41,7 +72,8 @@ function PDV() {
     const carregarProdutos = async () => {
         try {
             const response = await api.get('/produtos');
-            setProdutos(response.data);
+            // Backend retorna { data: [], pagination: {} }
+            setProdutos(response.data.data || response.data);
         } catch (error) {
             console.error('Erro ao carregar produtos:', error);
         }
@@ -64,6 +96,7 @@ function PDV() {
             }]);
         }
         setBusca('');
+        playSound('beep'); // Som ao adicionar
     };
 
     const removerDoCarrinho = (produtoId) => {
@@ -188,8 +221,22 @@ function PDV() {
                         disabled={carrinho.length === 0}
                         onClick={() => setShowPagamento(true)}
                     >
-                        Finalizar Venda (F5)
+                        💳 Finalizar Venda <span style={{ opacity: 0.7, fontSize: '0.9rem' }}>[F3]</span>
                     </button>
+
+                    {carrinho.length > 0 && (
+                        <button
+                            className="btn btn-outline w-full mt-2"
+                            onClick={() => {
+                                if (window.confirm('Limpar carrinho?')) {
+                                    setCarrinho([]);
+                                    playSound('error');
+                                }
+                            }}
+                        >
+                            🗑️ Limpar <span style={{ opacity: 0.7, fontSize: '0.9rem' }}>[F4]</span>
+                        </button>
+                    )}
                 </div>
             </div>
 

@@ -170,3 +170,116 @@ export const obterFluxoCaixa = async (req, res) => {
         res.status(500).json({ error: 'Erro ao obter fluxo de caixa' });
     }
 };
+
+// GET /financeiro/dashboard - KPIs gerais
+export const getDashboardFinanceiro = async (req, res) => {
+    try {
+        const hoje = new Date();
+        const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+
+        // Saldo em caixa (último registro)
+        const ultimoCaixa = await prisma.caixa.findFirst({
+            orderBy: { data: 'desc' }
+        });
+
+        // Contas a Pagar Hoje
+        const contasPagarHoje = await prisma.contaPagar.findMany({
+            where: {
+                status: 'pendente',
+                dataVencimento: {
+                    gte: hoje,
+                    lte: new Date(hoje.getTime() + 24 * 60 * 60 * 1000)
+                }
+            }
+        });
+
+        const totalPagarHoje = contasPagarHoje.reduce((acc, c) => acc + parseFloat(c.valor), 0);
+
+        // Contas a Receber Hoje
+        const contasReceberHoje = await prisma.contaReceber.findMany({
+            where: {
+                status: 'pendente',
+                dataVencimento: {
+                    gte: hoje,
+                    lte: new Date(hoje.getTime() + 24 * 60 * 60 * 1000)
+                }
+            }
+        });
+
+        const totalReceberHoje = contasReceberHoje.reduce((acc, c) => acc + parseFloat(c.valor), 0);
+
+        // Resultado do Mês (Receitas - Despesas)
+        const receitasMes = await prisma.contaReceber.aggregate({
+            where: {
+                status: 'pago',
+                dataRecebimento: {
+                    gte: inicioMes,
+                    lte: fimMes
+                }
+            },
+            _sum: { valor: true }
+        });
+
+        const despesasMes = await prisma.contaPagar.aggregate({
+            where: {
+                status: 'pago',
+                dataPagamento: {
+                    gte: inicioMes,
+                    lte: fimMes
+                }
+            },
+            _sum: { valor: true }
+        });
+
+        const resultadoMes = (receitasMes._sum.valor || 0) - (despesasMes._sum.valor || 0);
+
+        res.json({
+            saldoCaixa: ultimoCaixa?.saldoAtual || 0,
+            totalPagarHoje,
+            totalReceberHoje,
+            resultadoMes,
+            qtdContasPagarHoje: contasPagarHoje.length,
+            qtdContasReceberHoje: contasReceberHoje.length
+        });
+    } catch (error) {
+        console.error('Erro ao obter dashboard financeiro:', error);
+        res.status(500).json({ error: 'Erro ao carregar dashboard' });
+    }
+};
+
+// GET /financeiro/categorias
+export const listarCategorias = async (req, res) => {
+    try {
+        const { tipo } = req.query;
+
+        const where = { ativo: true };
+        if (tipo) where.tipo = tipo;
+
+        const categorias = await prisma.categoria.findMany({
+            where,
+            orderBy: { nome: 'asc' }
+        });
+
+        res.json(categorias);
+    } catch (error) {
+        console.error('Erro ao listar categorias:', error);
+        res.status(500).json({ error: 'Erro ao carregar categorias' });
+    }
+};
+
+// POST /financeiro/categorias
+export const criarCategoria = async (req, res) => {
+    try {
+        const { nome, tipo, cor, icone } = req.body;
+
+        const categoria = await prisma.categoria.create({
+            data: { nome, tipo, cor, icone }
+        });
+
+        res.status(201).json(categoria);
+    } catch (error) {
+        console.error('Erro ao criar categoria:', error);
+        res.status(500).json({ error: 'Erro ao criar categoria' });
+    }
+};

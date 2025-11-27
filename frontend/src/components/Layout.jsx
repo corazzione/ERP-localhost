@@ -21,7 +21,10 @@ function Layout({ setAuth }) {
                         <li><Link to="/pdv" className="text-positive font-bold">🏪 PDV (Caixa)</Link></li>
                         <li><Link to="/clientes">👥 Clientes</Link></li>
                         <li><Link to="/produtos">📦 Produtos</Link></li>
-                        <li><Link to="/vendas">🛒 Vendas</Link></li>
+                        <li><Link to="/vendas">📋 Histórico Vendas</Link></li>
+                        <li><Link to="/novo-orcamento">✏️ Novo Orçamento</Link></li>
+                        <li><Link to="/orcamentos">📄 Orçamentos</Link></li>
+                        <li><Link to="/pedidos">🏭 Pedidos</Link></li>
                         <li><Link to="/crediario">💳 Crediário</Link></li>
                         <li><Link to="/financeiro">💰 Financeiro</Link></li>
                         <li><Link to="/relatorios">📈 Relatórios</Link></li>

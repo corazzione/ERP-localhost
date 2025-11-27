@@ -31,7 +31,8 @@ function Clientes() {
     const carregarClientes = async () => {
         try {
             const response = await api.get('/clientes');
-            setClientes(response.data);
+            // Backend retorna { data: [], pagination: {} } ou apenas array (retrocompatibilidade)
+            setClientes(response.data.data || response.data);
         } catch (error) {
             console.error('Erro ao carregar clientes:', error);
             showToast('Erro ao carregar clientes', 'error');

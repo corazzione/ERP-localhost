@@ -2,11 +2,41 @@ import { prisma } from '../server.js';
 
 export const listarProdutos = async (req, res) => {
     try {
-        const produtos = await prisma.produto.findMany({
-            include: { variacoes: true },
-            orderBy: { nome: 'asc' }
+        const { page = 1, limit = 50, search = '', ativo } = req.query;
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const take = Math.min(parseInt(limit), 100);
+
+        const where = {
+            ...(search && {
+                OR: [
+                    { nome: { contains: search, mode: 'insensitive' } },
+                    { codigo: { contains: search, mode: 'insensitive' } }
+                ]
+            }),
+            ...(ativo !== undefined && { ativo: ativo === 'true' })
+        };
+
+        const [produtos, total] = await Promise.all([
+            prisma.produto.findMany({
+                where,
+                skip,
+                take,
+                include: { variacoes: true },
+                orderBy: { nome: 'asc' }
+            }),
+            prisma.produto.count({ where })
+        ]);
+
+        res.json({
+            data: produtos,
+            pagination: {
+                page: parseInt(page),
+                limit: take,
+                total,
+                pages: Math.ceil(total / take)
+            }
         });
-        res.json(produtos);
     } catch (error) {
         res.status(500).json({ error: 'Erro ao listar produtos' });
     }
@@ -34,7 +64,6 @@ export const criarProduto = async (req, res) => {
     try {
         const { codigo, nome, descricao, categoria, unidade, precoVenda, precoCusto, estoqueAtual, estoqueMinimo } = req.body;
 
-        // Validar código único
         const produtoExiste = await prisma.produto.findUnique({
             where: { codigo }
         });
@@ -43,7 +72,6 @@ export const criarProduto = async (req, res) => {
             return res.status(400).json({ error: 'Código já cadastrado' });
         }
 
-        // Validar estoque negativo
         if (estoqueAtual < 0 || estoqueMinimo < 0) {
             return res.status(400).json({ error: 'Estoque não pode ser negativo' });
         }
@@ -73,7 +101,6 @@ export const atualizarProduto = async (req, res) => {
         const { id } = req.params;
         const dados = req.body;
 
-        // Validar estoque negativo se estiver sendo atualizado
         if (dados.estoqueAtual !== undefined && dados.estoqueAtual < 0) {
             return res.status(400).json({ error: 'Estoque atual não pode ser negativo' });
         }

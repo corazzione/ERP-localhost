@@ -1,0 +1,319 @@
+.orcamentos-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.page-header h1 {
+    font-size: 28px;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.filtros-bar {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.filtro-tabs {
+    display: flex;
+    gap: 8px;
+}
+
+.filtro-tabs button {
+    padding: 8px 16px;
+    border: 2px solid transparent;
+    background: var(--color-gray-100);
+    color: var(--color-text-secondary);
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filtro-tabs button:hover {
+    background: var(--color-gray-200);
+}
+
+.filtro-tabs button.active {
+    background: var(--color-primary-50);
+    color: var(--color-primary-600);
+    border-color: var(--color-primary-600);
+}
+
+.search-input {
+    padding: 10px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 14px;
+    width: 300px;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+}
+
+.orcamentos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 20px;
+}
+
+.orcamento-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+}
+
+.orcamento-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    border-color: var(--color-primary-200);
+}
+
+.card-header {
+    padding: 16px;
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.card-info h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0 0 8px 0;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-warning {
+    background: var(--color-warning-100);
+    color: var(--color-warning-700);
+}
+
+.badge-success {
+    background: var(--color-success-100);
+    color: var(--color-success-700);
+}
+
+.badge-danger {
+    background: var(--color-danger-100);
+    color: var(--color-danger-700);
+}
+
+.badge-secondary {
+    background: var(--color-gray-200);
+    color: var(--color-gray-700);
+}
+
+.card-date {
+    font-size: 13px;
+    color: var(--color-text-tertiary);
+}
+
+.card-body {
+    padding: 16px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+}
+
+.info-row:not(:last-child) {
+    border-bottom: 1px dashed var(--color-border);
+}
+
+.info-row strong {
+    color: var(--color-text-secondary);
+}
+
+.total-row {
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 2px solid var(--color-border) !important;
+}
+
+.total-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-primary-600);
+}
+
+.validade {
+    font-size: 13px;
+    color: var(--color-text-tertiary);
+}
+
+.observacoes {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--color-gray-50);
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+}
+
+.card-actions {
+    padding: 12px 16px;
+    background: var(--color-gray-50);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    gap: 8px;
+}
+
+.btn-action {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-approve {
+    background: var(--color-success-600);
+    color: white;
+}
+
+.btn-approve:hover {
+    background: var(--color-success-700);
+    transform: translateY(-2px);
+}
+
+.btn-reject {
+    background: var(--color-danger-600);
+    color: white;
+}
+
+.btn-reject:hover {
+    background: var(--color-danger-700);
+    transform: translateY(-2px);
+}
+
+.btn-view-pedido {
+    background: var(--color-primary-600);
+    color: white;
+}
+
+.btn-view-pedido:hover {
+    background: var(--color-primary-700);
+}
+
+.motivo-recusa {
+    padding: 8px;
+    background: var(--color-danger-50);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--color-danger-700);
+    width: 100%;
+}
+
+.empty-state,
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 20px;
+    color: var(--color-text-primary);
+    margin: 0 0 8px 0;
+}
+
+.empty-state p {
+    color: var(--color-text-secondary);
+    margin: 0 0 24px 0;
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--color-gray-200);
+    border-top-color: var(--color-primary-600);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-state p {
+    margin-top: 16px;
+    color: var(--color-text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .orcamentos-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .filtros-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filtro-tabs {
+        flex-wrap: wrap;
+    }
+
+    .search-input {
+        width: 100%;
+    }
+
+    .page-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+    }
+}

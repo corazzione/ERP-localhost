@@ -81,9 +81,15 @@ export const obterDadosDashboard = async (req, res) => {
 
         const totalParcelasAtrasadas = parcelasAtrasadas.reduce((sum, p) => sum + parseFloat(p.valorParcela), 0);
 
-        // Top 5 produtos mais vendidos
+        // Top 5 produtos mais vendidos - FIX: Filtrar null values
         const topProdutos = await prisma.itemVenda.groupBy({
             by: ['produtoId'],
+            where: {
+                produtoId: { not: null }, // Filtrar produtos null
+                venda: {
+                    status: 'concluida'
+                }
+            },
             _sum: {
                 quantidade: true
             },
@@ -101,7 +107,7 @@ export const obterDadosDashboard = async (req, res) => {
                     where: { id: item.produtoId }
                 });
                 return {
-                    produto: produto.nome,
+                    produto: produto?.nome || 'Produto Removido',
                     quantidade: item._sum.quantidade
                 };
             })
@@ -131,7 +137,7 @@ export const obterDadosDashboard = async (req, res) => {
             topProdutos: topProdutosDetalhes
         });
     } catch (error) {
-        console.error(error);
+        console.error('Erro no dashboard:', error);
         res.status(500).json({ error: 'Erro ao obter dados do dashboard' });
     }
 };
