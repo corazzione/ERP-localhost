@@ -4,7 +4,23 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log('🌱 Iniciando seed do banco de dados...');
+    console.log('🌱 Iniciando seed...');
+
+    // ===== CONFIGURAÇÃO DE CREDIÁRIO =====
+    console.log('📊 Criando configuração de crediário...');
+    const creditoConfig = await prisma.creditoConfig.upsert({
+        where: { id: 'default-config' },
+        update: {},
+        create: {
+            id: 'default-config',
+            taxaPadraoMensal: 8.0,  // 8% ao mês
+            tipoJurosPadrao: 'COMPOSTO',
+            multaAtrasoPercentual: 2.0,  // 2%
+            jurosDiarioAtrasoPercentual: 0.033,  // ~1% ao mês
+            ativo: true
+        }
+    });
+    console.log('✅ Configuração de crediário criada:', creditoConfig.id);
 
     // Criar usuário admin
     const senhaHash = await bcrypt.hash('senha123', 10);
@@ -112,7 +128,7 @@ async function main() {
     console.log('✅ Produtos criados');
 
     // Criar fornecedor
-    await prisma.fornecedor.upsert({
+    await prisma.fornecedorups({
         where: { cnpj: '12345678000199' },
         update: {},
         create: {
@@ -125,7 +141,7 @@ async function main() {
     });
     console.log('✅ Fornecedor criado');
 
-    // Configurações do sistema
+    // Config urações do sistema
     await prisma.configuracao.upsert({
         where: { chave: 'taxa_juros_mora_diaria' },
         update: {},

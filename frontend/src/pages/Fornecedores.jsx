@@ -1,81 +1,68 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, Search } from 'lucide-react';
+import { Factory, Plus, Search, Phone, Mail, MapPin } from 'lucide-react';
 import api from '../services/api';
 import DataTable from '../components/DataTable';
-import ClientDrawer from '../components/ClientDrawer';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useToast } from '../components/Toast';
 
-function Clientes() {
+function Fornecedores() {
     const { showToast } = useToast();
-    const [clientes, setClientes] = useState([]);
-    const [filteredClientes, setFilteredClientes] = useState([]);
+    const [fornecedores, setFornecedores] = useState([]);
+    const [filteredFornecedores, setFilteredFornecedores] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    const [editingCliente, setEditingCliente] = useState(null);
-    const [selectedClient, setSelectedClient] = useState(null);
-    const [showDrawer, setShowDrawer] = useState(false);
+    const [editingFornecedor, setEditingFornecedor] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [formData, setFormData] = useState({
         nome: '',
-        cpf: '',
+        cnpj: '',
         telefone: '',
         email: '',
         endereco: '',
         cidade: '',
-        estado: ''
+        estado: '',
+        contato: ''
     });
 
     useEffect(() => {
-        carregarClientes();
+        carregarFornecedores();
     }, []);
 
     useEffect(() => {
-        const filtered = clientes.filter(cliente =>
-            cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (cliente.cpf && cliente.cpf.includes(searchTerm)) ||
-            (cliente.telefone && cliente.telefone.includes(searchTerm))
+        const filtered = fornecedores.filter(fornecedor =>
+            fornecedor.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (fornecedor.cnpj && fornecedor.cnpj.includes(searchTerm))
         );
-        setFilteredClientes(filtered);
-    }, [searchTerm, clientes]);
+        setFilteredFornecedores(filtered);
+    }, [searchTerm, fornecedores]);
 
-    const carregarClientes = async () => {
+    const carregarFornecedores = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/clientes');
+            const response = await api.get('/fornecedores');
             const data = response.data.data || response.data;
-            setClientes(data);
-            setFilteredClientes(data);
+            setFornecedores(data);
+            setFilteredFornecedores(data);
         } catch (error) {
-            console.error('Erro ao carregar clientes:', error);
-            showToast('Erro ao carregar clientes', 'error');
+            console.error('Erro ao carregar fornecedores:', error);
+            showToast('Erro ao carregar fornecedores', 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleRowClick = (cliente) => {
-        setSelectedClient(cliente);
-        setShowDrawer(true);
-    };
-
-    const handleEdit = (cliente) => {
-        setEditingCliente(cliente);
-        setFormData(cliente);
-        setShowModal(true);
-    };
-
     const handleNew = () => {
-        setEditingCliente(null);
+        setEditingFornecedor(null);
         setFormData({
             nome: '',
-            cpf: '',
+            cnpj: '',
             telefone: '',
             email: '',
             endereco: '',
             cidade: '',
-            estado: ''
+            estado: '',
+            contato: ''
         });
         setShowModal(true);
     };
@@ -83,18 +70,18 @@ function Clientes() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            if (editingCliente) {
-                await api.put(`/clientes/${editingCliente.id}`, formData);
-                showToast('Cliente atualizado com sucesso!', 'success');
+            if (editingFornecedor) {
+                await api.put(`/fornecedores/${editingFornecedor.id}`, formData);
+                showToast('Fornecedor atualizado com sucesso!', 'success');
             } else {
-                await api.post('/clientes', formData);
-                showToast('Cliente criado com sucesso!', 'success');
+                await api.post('/fornecedores', formData);
+                showToast('Fornecedor criado com sucesso!', 'success');
             }
             setShowModal(false);
-            carregarClientes();
+            carregarFornecedores();
         } catch (error) {
-            console.error('Erro ao salvar cliente:', error);
-            showToast(error.response?.data?.error || 'Erro ao salvar cliente', 'error');
+            console.error('Erro ao salvar fornecedor:', error);
+            showToast(error.response?.data?.error || 'Erro ao salvar fornecedor', 'error');
         }
     };
 
@@ -108,24 +95,26 @@ function Clientes() {
             )
         },
         {
-            key: 'cpf',
-            label: 'CPF',
+            key: 'cnpj',
+            label: 'CNPJ',
             sortable: true
+        },
+        {
+            key: 'contato',
+            label: 'Contato',
+            sortable: false
         },
         {
             key: 'telefone',
             label: 'Telefone',
-            sortable: false
-        },
-        {
-            key: 'email',
-            label: 'E-mail',
-            sortable: false
+            sortable: false,
+            render: (value) => value || '-'
         },
         {
             key: 'cidade',
             label: 'Cidade',
-            sortable: true
+            sortable: true,
+            render: (value, row) => value && row.estado ? `${value}/${row.estado}` : value || '-'
         }
     ];
 
@@ -137,15 +126,15 @@ function Clientes() {
         <div className="page-container">
             <div className="page-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <Users size={32} color="#3b82f6" />
+                    <Factory size={32} color="#3b82f6" />
                     <div>
-                        <h1 className="page-title">Clientes</h1>
-                        <p className="page-subtitle">Gerencie seus clientes</p>
+                        <h1 className="page-title">Fornecedores</h1>
+                        <p className="page-subtitle">Gerencie seus fornecedores</p>
                     </div>
                 </div>
                 <button onClick={handleNew} className="btn btn-primary">
                     <Plus size={20} />
-                    Novo Cliente
+                    Novo Fornecedor
                 </button>
             </div>
 
@@ -165,7 +154,7 @@ function Clientes() {
                 <input
                     type="text"
                     className="input"
-                    placeholder="Buscar por nome, CPF ou telefone..."
+                    placeholder="Buscar por nome ou CNPJ..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     style={{ paddingLeft: '3rem', width: '100%' }}
@@ -176,19 +165,22 @@ function Clientes() {
             <div className="card">
                 <DataTable
                     columns={columns}
-                    data={filteredClientes}
-                    onRowClick={handleRowClick}
-                    emptyMessage="Nenhum cliente encontrado"
+                    data={filteredFornecedores}
+                    emptyMessage="Nenhum fornecedor encontrado"
                 />
             </div>
 
             {/* Modal */}
             {showModal && (
-                <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingCliente ? 'Editar Cliente' : 'Novo Cliente'}>
+                <Modal
+                    isOpen={showModal}
+                    onClose={() => setShowModal(false)}
+                    title={editingFornecedor ? 'Editar Fornecedor' : 'Novo Fornecedor'}
+                >
                     <form onSubmit={handleSubmit}>
                         <div className="form-grid">
-                            <div className="form-group">
-                                <label className="label">Nome *</label>
+                            <div className="form-group full-width">
+                                <label className="label">Nome / Razão Social *</label>
                                 <input
                                     type="text"
                                     className="input"
@@ -199,12 +191,22 @@ function Clientes() {
                             </div>
 
                             <div className="form-group">
-                                <label className="label">CPF</label>
+                                <label className="label">CNPJ</label>
                                 <input
                                     type="text"
                                     className="input"
-                                    value={formData.cpf}
-                                    onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                                    value={formData.cnpj}
+                                    onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label className="label">Pessoa de Contato</label>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    value={formData.contato}
+                                    onChange={(e) => setFormData({ ...formData, contato: e.target.value })}
                                 />
                             </div>
 
@@ -265,21 +267,14 @@ function Clientes() {
                                 Cancelar
                             </button>
                             <button type="submit" className="btn btn-primary">
-                                {editingCliente ? 'Atualizar' : 'Criar'}
+                                {editingFornecedor ? 'Atualizar' : 'Criar'}
                             </button>
                         </div>
                     </form>
                 </Modal>
             )}
-
-            {/* Client Drawer */}
-            <ClientDrawer
-                isOpen={showDrawer}
-                onClose={() => setShowDrawer(false)}
-                client={selectedClient}
-            />
         </div>
     );
 }
 
-export default Clientes;
+export default Fornecedores;

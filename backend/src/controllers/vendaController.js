@@ -75,45 +75,126 @@ export const criarVenda = async (req, res) => {
 
             // Gerar Carnê/Parcelas se for Crediário e houver valor a pagar
             if (formaPagamento === 'crediario' && totalPagar > 0 && clienteId) {
-                const numParcelas = req.body.numParcelas || 1;
-                const valorParcela = totalPagar / numParcelas;
-                const dataAtual = new Date();
+                const {
+                    modoCrediario = 'PADRAO',
+                    numParcelas = 1,
+                    primeiroVencimento,
+                    taxaPersonalizadaMensal,
+                    tipoJurosPersonalizado,
+                    parcelasManual
+                } = req.body;
+
+                let cronograma;
+                let taxa = 0;
+                let tipoJuros = 'COMPOSTO';
+
+                // Importar calculadora
+                const {
+                    gerarCronogramaParcelas,
+                    processarParcelasManual
+                } = await import('../utils/crediarioCalculator.js');
+
+                // Buscar configuração padrão
+                const config = await tx.creditoConfig.findFirst({ where: { ativo: true } });
+
+                if (modoCrediario === 'MANUAL') {
+                    // Modo MANUAL - valores definidos pelo dono
+                    if (!parcelasManual || parcelasManual.length === 0) {
+                        throw new Error('Modo MANUAL requer parcelasManual');
+                    }
+                    cronograma = processarParcelasManual(parcelasManual, totalPagar);
+
+                } else {
+                    // Determinar taxa e tipo de juros
+                    if (modoCrediario === 'PERSONALIZADO') {
+                        taxa = parseFloat(taxaPersonalizadaMensal);
+                        tipoJuros = tipoJurosPersonalizado || 'COMPOSTO';
+                    } else {
+                        // PADRAO
+                        taxa = parseFloat(config?.taxaPadraoMensal || 8);
+                        tipoJuros = config?.tipoJurosPadrao || 'COMPOSTO';
+                    }
+
+                    // Calcular data do primeiro vencimento
+                    const primeiroPagamento = primeiroVencimento
+                        ? new Date(primeiroVencimento)
+                        : new Date(new Date().setMonth(new Date().getMonth() + 1));
+
+                    // Gerar cronograma
+                    cronograma = gerarCronogramaParcelas(
+                        totalPagar,
+                        taxa,
+                        numParcelas,
+                        primeiroPagamento,
+                        tipoJuros
+                    );
+                }
 
                 // Criar Carnê
+                const ultimoCarne = await tx.carne.findFirst({
+                    orderBy: { numeroCarne: 'desc' }
+                });
+                const numeroCarne = ultimoCarne
+                    ? String(parseInt(ultimoCarne.numeroCarne) + 1).padStart(8, '0')
+                    : '00000001';
+
                 const carne = await tx.carne.create({
                     data: {
                         vendaId: novaVenda.id,
                         clienteId,
-                        numeroCarne: numeroVenda,
-                        valorTotal: totalPagar,
+                        numeroCarne,
+                        valorTotal: cronograma.valorTotal,
                         valorOriginal: totalPagar,
                         numParcelas,
-                        taxaJuros: 0, // Implementar juros futuramente
-                        valorJuros: 0,
+                        taxaJuros: taxa,
+                        valorJuros: cronograma.valorJurosTotal,
                         status: 'ativo'
                     }
                 });
 
-                // Criar Parcelas
-                for (let i = 1; i <= numParcelas; i++) {
-                    const dataVencimento = new Date(dataAtual);
-                    dataVencimento.setMonth(dataVencimento.getMonth() + i);
-
-                    await tx.parcela.create({
+                // Criar Parcelas com breakdown detalhado
+                for (const parcelaData of cronograma.parcelas) {
+                    const novaParcela = await tx.parcela.create({
                         data: {
                             carneId: carne.id,
-                            numeroParcela: i,
-                            dataVencimento,
-                            valorParcela,
+                            numeroParcela: parcelaData.numero,
+                            dataVencimento: parcelaData.dataVencimento,
+                            valorParcela: parcelaData.valorTotalPrevisto,
+                            valorPrincipal: parcelaData.valorPrincipal,
+                            valorJurosPrevisto: parcelaData.valorJurosPrevisto,
+                            valorTotalPrevisto: parcelaData.valorTotalPrevisto,
+                            status: 'pendente'
+                        }
+                    });
+
+                    // 🪷 INTEGRAÇÃO FINANCEIRO: Criar ContaReceber para cada parcela
+                    await tx.contaReceber.create({
+                        data: {
+                            clienteId,
+                            parcelaId: novaParcela.id,
+                            descricao: `Parcela ${parcelaData.numero}/${numParcelas} - Carnê ${numeroCarne} - Venda #${novaVenda.numero}`,
+                            valor: parcelaData.valorTotalPrevisto,
+                            dataVencimento: parcelaData.dataVencimento,
                             status: 'pendente'
                         }
                     });
                 }
 
+                // Atualizar Venda com informações de crediário
+                await tx.venda.update({
+                    where: { id: novaVenda.id },
+                    data: {
+                        modoCrediario,
+                        usaTaxaPadrao: modoCrediario === 'PADRAO',
+                        taxaPersonalizadaMensal: modoCrediario === 'PERSONALIZADO' ? taxa : null,
+                        tipoJurosPersonalizado: modoCrediario === 'PERSONALIZADO' ? tipoJuros : null
+                    }
+                });
+
                 // Atualizar Saldo Devedor do Cliente
                 await tx.cliente.update({
                     where: { id: clienteId },
-                    data: { saldoDevedor: { increment: totalPagar } }
+                    data: { saldoDevedor: { increment: cronograma.valorTotal } }
                 });
             }
 

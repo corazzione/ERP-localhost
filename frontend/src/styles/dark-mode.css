@@ -1,0 +1,166 @@
+/* Dark Mode Global Styles */
+
+/* Dark mode colors */
+html.dark {
+    /* Backgrounds */
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-card: #1e293b;
+    --bg-hover: #334155;
+
+    /* Borders */
+    --border-color: #334155;
+
+    /* Text */
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+
+    /* Inputs */
+    --input-bg: #0f172a;
+    --input-border: #334155;
+}
+
+/* Light mode colors (default) */
+html:not(.dark) {
+    --bg-primary: #f9fafb;
+    --bg-secondary: #ffffff;
+    --bg-card: #ffffff;
+    --bg-hover: #f3f4f6;
+
+    --border-color: #e5e7eb;
+
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+
+    --input-bg: #ffffff;
+    --input-border: #e5e7eb;
+}
+
+/* Force background colors on dark mode - handles inline styles */
+html.dark .card,
+html.dark .table,
+html.dark .modal-content,
+html.dark div[style*="background-color: white"],
+html.dark div[style*="backgroundColor: 'white'"],
+html.dark div[class*="bg-white"] {
+    background-color: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+/* Better box shadows for dark mode */
+html.dark .card,
+html.dark div[style*="boxShadow"],
+html.dark div[class*="shadow"] {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Apply to common elements */
+.card,
+.table,
+.modal-content {
+    background-color: var(--bg-card);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.input,
+.select,
+.textarea {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--input-border) !important;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+    border-color: var(--color-primary-500) !important;
+}
+
+.label {
+    color: var(--text-secondary) !important;
+}
+
+.page-header h1,
+.page-title {
+    color: var(--text-primary) !important;
+}
+
+.page-header p {
+    color: var(--text-muted) !important;
+}
+
+.table {
+    background-color: var(--bg-card) !important;
+}
+
+.table th {
+    background-color: var(--bg-hover) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.table td {
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+html.dark .table tbody tr:hover {
+    background-color: #475569 !important;
+}
+
+/* Modals */
+html.dark .modal {
+    background-color: rgba(0, 0, 0, 0.75) !important;
+}
+
+/* Buttons inherit their original gradient colors */
+
+.btn-outline {
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+html.dark .btn-outline:hover {
+    background-color: var(--bg-hover) !important;
+}
+
+/* Metric cards */
+.metric-card {
+    background-color: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+.metric-label {
+    color: var(--text-secondary) !important;
+}
+
+.metric-value {
+    color: var(--text-primary) !important;
+}
+
+/* Form groups */
+.form-group {
+    color: var(--text-primary) !important;
+}
+
+/* Error messages stay red */
+.error-message {
+    color: var(--color-negative-600) !important;
+}
+
+/* Prevent card overlap with proper spacing */
+html.dark>div,
+html.dark .container {
+    background-color: var(--bg-primary) !important;
+}
+
+/* Spinner animation */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

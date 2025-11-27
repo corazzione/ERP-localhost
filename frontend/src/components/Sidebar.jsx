@@ -1,9 +1,31 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import logo from '../assets/logo.png';
+import { useNavigate } from 'react-router-dom';
+import {
+    Home,
+    ShoppingCart,
+    Receipt,
+    FileText,
+    ClipboardList,
+    Package,
+    Warehouse,
+    ShoppingBag,
+    DollarSign,
+    Wallet,
+    TrendingUp,
+    ArrowUpDown,
+    Users,
+    Factory,
+    CreditCard as CreditCardIcon,
+    BarChart3,
+    LogOut,
+    FolderKanban
+} from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
+import SidebarGroup from './SidebarGroup';
+import SidebarItem from './SidebarItem';
 
 function Sidebar({ setAuth }) {
-    const location = useLocation();
     const navigate = useNavigate();
+    const { isDark } = useTheme();
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -13,32 +35,16 @@ function Sidebar({ setAuth }) {
         navigate('/login');
     };
 
-    const menuItems = [
-        { path: '/', icon: '📊', label: 'Dashboard' },
-        { path: '/pdv', icon: '🏪', label: 'PDV (Caixa)', highlight: true },
-        { path: '/clientes', icon: '👥', label: 'Clientes' },
-        { path: '/produtos', icon: '📦', label: 'Produtos' },
-        { path: '/vendas', icon: '📋', label: 'Vendas' },
-        { path: '/novo-orcamento', icon: '✏️', label: 'Novo Orçamento' },
-        { path: '/orcamentos', icon: '📄', label: 'Orçamentos' },
-        { path: '/pedidos', icon: '🏭', label: 'Pedidos' },
-        { path: '/pedidos-compra', icon: '🛒', label: 'Compras' },
-        { path: '/crediario', icon: '💳', label: 'Crediário' },
-        { path: '/financeiro', icon: '💰', label: 'Financeiro' },
-        { path: '/relatorios', icon: '📈', label: 'Relatórios' }
-    ];
-
-    const isActive = (path) => {
-        if (path === '/') return location.pathname === '/';
-        return location.pathname.startsWith(path);
-    };
+    const bgColor = isDark ? '#1e293b' : '#ffffff';
+    const borderColor = isDark ? '#334155' : '#e5e7eb';
+    const textSecondary = isDark ? '#94a3b8' : '#9ca3af';
 
     return (
         <aside style={{
             width: '260px',
             height: '100vh',
-            backgroundColor: '#ffffff',
-            borderRight: '1px solid #e5e7eb',
+            backgroundColor: bgColor,
+            borderRight: `1px solid ${borderColor}`,
             display: 'flex',
             flexDirection: 'column',
             position: 'fixed',
@@ -46,23 +52,64 @@ function Sidebar({ setAuth }) {
             top: 0,
             zIndex: 50
         }}>
-            {/* Logo */}
+            {/* Logo/Brand */}
             <div style={{
-                padding: '1.5rem 1.5rem 1rem',
-                borderBottom: '1px solid #e5e7eb'
+                padding: '1.25rem 1.25rem 1.5rem',
+                marginBottom: '0.5rem'
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <img src={logo} alt="Rivvi ERP" style={{ height: '32px' }} />
-                    <span style={{
-                        fontSize: '20px',
-                        fontWeight: '700',
-                        background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text'
-                    }}>
-                        Rivvi ERP
-                    </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    {/* Lotus Logo SVG */}
+                    <svg
+                        width="32"
+                        height="32"
+                        viewBox="0 0 32 32"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        style={{ flexShrink: 0 }}
+                    >
+                        <defs>
+                            <linearGradient id="lotusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#8b5cf6" />
+                                <stop offset="100%" stopColor="#7c3aed" />
+                            </linearGradient>
+                        </defs>
+                        {/* Center petal */}
+                        <path d="M16 6C16 6 14 12 14 16C14 18.2091 14.8954 20 16 20C17.1046 20 18 18.2091 18 16C18 12 16 6 16 6Z" fill="url(#lotusGradient)" />
+                        {/* Left petal */}
+                        <path d="M8 14C8 14 11 18 14 19C15.6569 19.6667 17 19 17.5 17.5C18 16 17 14 15 13C12 11.5 8 14 8 14Z" fill="url(#lotusGradient)" opacity="0.8" />
+                        {/* Right petal */}
+                        <path d="M24 14C24 14 21 18 18 19C16.3431 19.6667 15 19 14.5 17.5C14 16 15 14 17 13C20 11.5 24 14 24 14Z" fill="url(#lotusGradient)" opacity="0.8" />
+                        {/* Left outer petal */}
+                        <path d="M4 20C4 20 8 22 11 22C12.6569 22 14 21 14 19.5C14 18 12.5 17 11 17C8 17 4 20 4 20Z" fill="url(#lotusGradient)" opacity="0.6" />
+                        {/* Right outer petal */}
+                        <path d="M28 20C28 20 24 22 21 22C19.3431 22 18 21 18 19.5C18 18 19.5 17 21 17C24 17 28 20 28 20Z" fill="url(#lotusGradient)" opacity="0.6" />
+                    </svg>
+
+                    <div>
+                        <h1 style={{
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                            margin: 0,
+                            letterSpacing: '-0.01em',
+                            lineHeight: '1.2'
+                        }}>
+                            Lotus Core
+                        </h1>
+                        <p style={{
+                            fontSize: '10px',
+                            fontWeight: '500',
+                            color: isDark ? '#94a3b8' : '#9ca3af',
+                            margin: 0,
+                            letterSpacing: '0.05em',
+                            textTransform: 'uppercase'
+                        }}>
+                            ERP
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -70,75 +117,43 @@ function Sidebar({ setAuth }) {
             <nav style={{
                 flex: 1,
                 overflowY: 'auto',
-                padding: '1rem 0.75rem'
+                overflowX: 'hidden',
+                padding: '0'
             }}>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                    {menuItems.map((item) => (
-                        <li key={item.path} style={{ marginBottom: '4px' }}>
-                            <Link
-                                to={item.path}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    padding: '10px 14px',
-                                    borderRadius: '10px',
-                                    textDecoration: 'none',
-                                    fontSize: '14px',
-                                    fontWeight: isActive(item.path) ? '600' : '500',
-                                    color: isActive(item.path) ? '#3b82f6' : '#6b7280',
-                                    backgroundColor: isActive(item.path) ? '#eff6ff' : 'transparent',
-                                    transition: 'all 0.2s',
-                                    position: 'relative'
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!isActive(item.path)) {
-                                        e.target.style.backgroundColor = '#f9fafb';
-                                        e.target.style.color = '#374151';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!isActive(item.path)) {
-                                        e.target.style.backgroundColor = 'transparent';
-                                        e.target.style.color = '#6b7280';
-                                    }
-                                }}
-                            >
-                                {isActive(item.path) && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        left: 0,
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        width: '3px',
-                                        height: '20px',
-                                        backgroundColor: '#3b82f6',
-                                        borderRadius: '0 2px 2px 0'
-                                    }} />
-                                )}
-                                <span style={{ fontSize: '18px' }}>{item.icon}</span>
-                                <span>{item.label}</span>
-                                {item.highlight && (
-                                    <span style={{
-                                        marginLeft: 'auto',
-                                        fontSize: '10px',
-                                        fontWeight: '600',
-                                        color: '#10b981',
-                                        backgroundColor: '#d1fae5',
-                                        padding: '2px 8px',
-                                        borderRadius: '6px'
-                                    }}>HOT</span>
-                                )}
-                            </Link>
-                        </li>
-                    ))}
-                </ul>
+                <SidebarGroup title="Dashboard" defaultExpanded={true}>
+                    <SidebarItem path="/" icon={Home} label="Home" />
+                </SidebarGroup>
+
+                <SidebarGroup title="Sales" defaultExpanded={true}>
+                    <SidebarItem path="/pdv" icon={ShoppingCart} label="PDV" />
+                    <SidebarItem path="/vendas" icon={Receipt} label="Vendas" />
+                    <SidebarItem path="/orcamentos" icon={ClipboardList} label="Orçamentos" />
+                </SidebarGroup>
+
+                <SidebarGroup title="Inventory">
+                    <SidebarItem path="/produtos" icon={Package} label="Produtos" />
+                    <SidebarItem path="/estoque" icon={Warehouse} label="Estoque" />
+                    <SidebarItem path="/fornecedores" icon={Factory} label="Fornecedores" />
+                </SidebarGroup>
+
+                <SidebarGroup title="Financial">
+                    <SidebarItem path="/financeiro" icon={DollarSign} label="Painel Geral" />
+                    <SidebarItem path="/crediario" icon={CreditCardIcon} label="Crediário" />
+                </SidebarGroup>
+
+                <SidebarGroup title="Contacts">
+                    <SidebarItem path="/clientes" icon={Users} label="Clientes" />
+                </SidebarGroup>
+
+                <SidebarGroup title="Reports">
+                    <SidebarItem path="/relatorios" icon={BarChart3} label="Relatórios" />
+                </SidebarGroup>
             </nav>
 
-            {/* Logout */}
+            {/* Footer / Logout */}
             <div style={{
-                padding: '1rem',
-                borderTop: '1px solid #e5e7eb'
+                padding: '1rem 0.75rem',
+                borderTop: `1px solid ${borderColor}`
             }}>
                 <button
                     onClick={handleLogout}
@@ -146,30 +161,27 @@ function Sidebar({ setAuth }) {
                         width: '100%',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        padding: '10px',
+                        gap: '0.75rem',
+                        padding: '0.625rem 1rem',
                         backgroundColor: 'transparent',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '10px',
-                        color: '#6b7280',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: textSecondary,
                         fontSize: '14px',
-                        fontWeight: '500',
+                        fontWeight: '400',
                         cursor: 'pointer',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.15s'
                     }}
                     onMouseEnter={(e) => {
-                        e.target.style.backgroundColor = '#fef2f2';
-                        e.target.style.borderColor = '#fecaca';
-                        e.target.style.color = '#dc2626';
+                        e.currentTarget.style.backgroundColor = isDark ? '#7f1d1d' : '#fef2f2';
+                        e.currentTarget.style.color = '#dc2626';
                     }}
                     onMouseLeave={(e) => {
-                        e.target.style.backgroundColor = 'transparent';
-                        e.target.style.borderColor = '#e5e7eb';
-                        e.target.style.color = '#6b7280';
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = textSecondary;
                     }}
                 >
-                    <span>🚪</span>
+                    <LogOut size={20} strokeWidth={1.5} />
                     <span>Sair</span>
                 </button>
             </div>

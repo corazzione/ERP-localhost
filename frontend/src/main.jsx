@@ -4,6 +4,8 @@ import App from './App.jsx';
 import { ToastProvider } from './components/Toast';
 import './styles/design-system.css';
 import './styles/app.css';
+import './styles/dark-mode.css';
+import './styles/animations.css';
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>

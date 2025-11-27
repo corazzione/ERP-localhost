@@ -5,7 +5,6 @@ export const criarCarne = async (req, res) => {
     try {
         const { vendaId, numParcelas, taxaJuros, primeiroVencimento } = req.body;
 
-        // Buscar venda
         const venda = await prisma.venda.findUnique({
             where: { id: vendaId },
             include: { cliente: true }
@@ -19,7 +18,6 @@ export const criarCarne = async (req, res) => {
             return res.status(400).json({ error: 'Venda sem cliente vinculado' });
         }
 
-        // Verificar limite de crédito
         const cliente = venda.cliente;
         const novoSaldo = parseFloat(cliente.saldoDevedor) + parseFloat(venda.total);
 
@@ -32,7 +30,6 @@ export const criarCarne = async (req, res) => {
             });
         }
 
-        // Calcular parcelas
         const parcelas = calcularParcelas(
             parseFloat(venda.total),
             numParcelas,
@@ -40,7 +37,6 @@ export const criarCarne = async (req, res) => {
             new Date(primeiroVencimento)
         );
 
-        // Gerar número do carnê
         const ultimoCarne = await prisma.carne.findFirst({
             orderBy: { numeroCarne: 'desc' }
         });
@@ -49,7 +45,6 @@ export const criarCarne = async (req, res) => {
             ? String(parseInt(ultimoCarne.numeroCarne) + 1).padStart(8, '0')
             : '00000001';
 
-        // Criar carnê
         const carne = await prisma.$transaction(async (tx) => {
             const novoCarne = await tx.carne.create({
                 data: {
@@ -65,7 +60,9 @@ export const criarCarne = async (req, res) => {
                         create: parcelas.parcelas.map((p, index) => ({
                             numeroParcela: index + 1,
                             dataVencimento: p.vencimento,
-                            valorParcela: p.valor
+                            valorParcela: p.valor,
+                            valorPrincipal: p.valor,
+                            valorTotalPrevisto: p.valor
                         }))
                     }
                 },
@@ -76,13 +73,11 @@ export const criarCarne = async (req, res) => {
                 }
             });
 
-            // Atualizar venda
             await tx.venda.update({
                 where: { id: vendaId },
                 data: { formaPagamento: 'crediario', statusPagamento: 'pendente' }
             });
 
-            // Atualizar saldo devedor do cliente
             await tx.cliente.update({
                 where: { id: venda.clienteId },
                 data: {
@@ -146,6 +141,7 @@ export const buscarCarne = async (req, res) => {
     }
 };
 
+// 🪷 NOVO: Pagamento com Amortização Automática
 export const pagarParcela = async (req, res) => {
     try {
         const { id } = req.params;
@@ -164,35 +160,56 @@ export const pagarParcela = async (req, res) => {
             return res.status(400).json({ error: 'Parcela já foi paga' });
         }
 
-        // Calcular juros de mora se houver atraso
+        // Importar funções
+        const { calcularAmortizacao, calcularJurosMora } = await import('../utils/crediarioCalculator.js');
+
+        // Buscar config
+        const config = await prisma.creditoConfig.findFirst({ where: { ativo: true } });
+
         const dataVenc = new Date(parcela.dataVencimento);
         const dataPgto = dataPagamento ? new Date(dataPagamento) : new Date();
-        const diasAtraso = Math.max(0, Math.floor((dataPgto - dataVenc) / (1000 * 60 * 60 * 24)));
+        const diferencaDias = Math.floor((dataPgto - dataVenc) / (1000 * 60 * 60 * 24));
 
-        const { jurosMora, multaAtraso, valorTotal } = calcularJurosMora(
-            parseFloat(parcela.valorParcela),
-            diasAtraso
-        );
+        let valorFinal = parseFloat(parcela.valorTotalPrevisto);
+        let multaAtraso = 0;
+        let jurosMora = 0;
+        let descontoAntecipacao = 0;
+        let diasAtraso = 0;
+        let diasAntecipados = 0;
+
+        if (diferencaDias > 0) {
+            // ATRASO
+            diasAtraso = diferencaDias;
+            const resultadoMora = calcularJurosMora(
+                valorFinal,
+                diasAtraso,
+                {
+                    multaPercentual: parseFloat(config?.multaAtrasoPercentual || 2),
+                    jurosDiarioPercentual: parseFloat(config?.jurosDiarioAtrasoPercentual || 0.033)
+                }
+            );
+            multaAtraso = resultadoMora.multa;
+            jurosMora = resultadoMora.jurosMora;
+            valorFinal = resultadoMora.valorFinal;
+
+        } else if (diferencaDias < 0) {
+            // ANTECIPADO - Amortização
+            const resultadoAmortizacao = calcularAmortizacao(parcela, dataPgto);
+            descontoAntecipacao = resultadoAmortizacao.descontoAntecipacao;
+            diasAntecipados = resultadoAmortizacao.diasAntecipados;
+            valorFinal = resultadoAmortizacao.valorFinal;
+        }
 
         const resultado = await prisma.$transaction(async (tx) => {
             // Atualizar parcela
             const parcelaAtualizada = await tx.parcela.update({
                 where: { id },
                 data: {
-                    valorPago: valorPago || valorTotal,
+                    valorPago: valorPago || valorFinal,
                     dataPagamento: dataPgto,
                     diasAtraso,
                     jurosMora,
                     multaAtraso,
-                    status: 'pago'
-                }
-            });
-
-            // Atualizar saldo devedor do cliente
-            await tx.cliente.update({
-                where: { id: parcela.carne.clienteId },
-                data: {
-                    saldoDevedor: { decrement: valorPago || valorTotal }
                 }
             });
 
@@ -200,7 +217,7 @@ export const pagarParcela = async (req, res) => {
             const parcelasRestantes = await tx.parcela.count({
                 where: {
                     carneId: parcela.carneId,
-                    status: { not: 'pago' }
+                    status: 'pendente'
                 }
             });
 
@@ -211,7 +228,19 @@ export const pagarParcela = async (req, res) => {
                 });
             }
 
-            return parcelaAtualizada;
+            return {
+                parcela: parcelaAtualizada,
+                resumo: {
+                    valorFinal,
+                    multaAtraso,
+                    jurosMora,
+                    descontoAntecipacao,
+                    diasAtraso,
+                    diasAntecipados,
+                    economizado: diasAntecipados > 0,
+                    parcelasRestantes
+                }
+            };
         });
 
         res.json(resultado);
@@ -270,7 +299,6 @@ export const quitarCarne = async (req, res) => {
         const simulacao = calcularQuitacaoAntecipada(carne);
 
         const resultado = await prisma.$transaction(async (tx) => {
-            // Marcar todas as parcelas como pagas
             await tx.parcela.updateMany({
                 where: {
                     carneId: id,
@@ -279,17 +307,15 @@ export const quitarCarne = async (req, res) => {
                 data: {
                     status: 'pago',
                     dataPagamento: dataPagamento ? new Date(dataPagamento) : new Date(),
-                    valorPago: 0 // Será recalculado individualmente se necessário
+                    valorPago: 0
                 }
             });
 
-            // Atualizar carnê
             const carneAtualizado = await tx.carne.update({
                 where: { id },
                 data: { status: 'quitado' }
             });
 
-            // Atualizar saldo devedor do cliente
             await tx.cliente.update({
                 where: { id: carne.clienteId },
                 data: {
@@ -311,16 +337,13 @@ export const quitarCarne = async (req, res) => {
     }
 };
 
-// GET /crediario/resumo - KPIs gerais de crediário
 export const getResumo = async (req, res) => {
     try {
-        // Total a receber (soma de parcelas pendentes)
         const totalReceber = await prisma.parcela.aggregate({
             where: { status: 'pendente' },
             _sum: { valorParcela: true }
         });
 
-        // Parcelas vencidas
         const hoje = new Date();
         const parcelasVencidas = await prisma.parcela.findMany({
             where: {
@@ -332,12 +355,10 @@ export const getResumo = async (req, res) => {
         const totalVencido = parcelasVencidas.reduce((acc, p) => acc + parseFloat(p.valorParcela), 0);
         const qtdVencidas = parcelasVencidas.length;
 
-        // Total de carnês ativos
         const carnesAtivos = await prisma.carne.count({
             where: { status: 'ativo' }
         });
 
-        // Calcular inadimplência %
         const todasParcelas = await prisma.parcela.count();
         const inadimplencia = todasParcelas > 0 ? (qtdVencidas / todasParcelas) * 100 : 0;
 
@@ -354,26 +375,22 @@ export const getResumo = async (req, res) => {
     }
 };
 
-// GET /crediario/parcelas - Lista consolidada de parcelas
 export const listarParcelas = async (req, res) => {
     try {
         const { status, clienteId, vencidas } = req.query;
 
         const where = {};
 
-        // Filtro por status
         if (status) {
             where.status = status;
         }
 
-        // Filtro por cliente
         if (clienteId) {
             where.carne = {
                 clienteId: clienteId
             };
         }
 
-        // Filtro por vencidas
         if (vencidas === 'true') {
             where.status = 'pendente';
             where.dataVencimento = { lt: new Date() };
@@ -397,7 +414,7 @@ export const listarParcelas = async (req, res) => {
             orderBy: {
                 dataVencimento: 'asc'
             },
-            take: 100 // Limitar a 100 para performance
+            take: 100
         });
 
         res.json(parcelas);
@@ -406,4 +423,3 @@ export const listarParcelas = async (req, res) => {
         res.status(500).json({ error: 'Erro ao carregar parcelas' });
     }
 };
-

@@ -1,52 +1,74 @@
-import { useState } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 
-export default function LoadingSpinner({ size = 'md', fullscreen = false }) {
+function LoadingSpinner({ size = 'md', fullScreen = false, text = '' }) {
+    const { isDark } = useTheme();
+
     const sizes = {
-        sm: 'w-4 h-4 border-2',
-        md: 'w-8 h-8 border-3',
-        lg: 'w-12 h-12 border-4'
+        sm: '24px',
+        md: '48px',
+        lg: '64px',
+        xl: '96px'
     };
 
     const spinner = (
-        <div className={`spinner ${sizes[size]}`}></div>
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '1rem'
+        }}>
+            <div style={{
+                width: sizes[size],
+                height: sizes[size],
+                border: '3px solid',
+                borderColor: isDark ? '#334155' : '#e5e7eb',
+                borderTopColor: '#3b82f6',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+            }} />
+            {text && (
+                <p style={{
+                    fontSize: '14px',
+                    color: isDark ? '#cbd5e1' : '#64748b',
+                    fontWeight: '500'
+                }}>
+                    {text}
+                </p>
+            )}
+        </div>
     );
 
-    if (fullscreen) {
+    if (fullScreen) {
         return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-8">
-                    {spinner}
-                    <p className="mt-4 text-neutral-600">Carregando...</p>
-                </div>
+            <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: isDark ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 9999,
+                backdropFilter: 'blur(4px)'
+            }}>
+                {spinner}
             </div>
         );
     }
 
-    return spinner;
-}
-
-export function LoadingButton({ loading, children, disabled, ...props }) {
     return (
-        <button {...props} disabled={disabled || loading} className={props.className}>
-            {loading ? (
-                <div className="flex items-center gap-2">
-                    <LoadingSpinner size="sm" />
-                    <span>Carregando...</span>
-                </div>
-            ) : children}
-        </button>
-    );
-}
-
-export function LoadingOverlay({ show, message = 'Carregando...' }) {
-    if (!show) return null;
-
-    return (
-        <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
-            <div className="text-center">
-                <LoadingSpinner size="lg" />
-                <p className="mt-4 text-neutral-600">{message}</p>
-            </div>
+        <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem'
+        }}>
+            {spinner}
         </div>
     );
 }
+
+export default LoadingSpinner;
