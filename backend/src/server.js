@@ -19,6 +19,7 @@ import dashboardRoutes from './routes/dashboardRoutes.js';
 import orcamentoRoutes from './routes/orcamentoRoutes.js';
 import pedidoRoutes from './routes/pedidoRoutes.js';
 import pedidoCompraRoutes from './routes/pedidoCompraRoutes.js';
+import pixRoutes from './routes/pixRoutes.js';
 
 dotenv.config();
 
@@ -55,6 +56,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/orcamentos', orcamentoRoutes);
 app.use('/api/pedidos', pedidoRoutes);
 app.use('/api/pedidos-compra', pedidoCompraRoutes);
+app.use('/api', pixRoutes); // Rotas PIX
 
 // Rota de teste
 app.get('/api/health', (req, res) => {

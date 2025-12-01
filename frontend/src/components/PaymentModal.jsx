@@ -1,124 +1,124 @@
 import { useState, useEffect } from 'react';
+import { X, DollarSign, CreditCard, Smartphone, Calendar, Check } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import { DollarSign, CreditCard, Smartphone, X, Calendar } from 'lucide-react';
+import PaymentMethodButton from './pdv/PaymentMethodButton';
+import PixPayment from './pdv/PixPayment';
 
 /**
- * 🪷 PaymentModal - Modal unificado para todas as formas de pagamento
- * Suporta: Dinheiro, Cartão Crédito/Débito, PIX e Crediário
+ * 🪷 PaymentModal Premium - Redesigned
+ * Inspirado em Shopify POS, Square e Lightspeed
  */
-function PaymentModal({ isOpen, onClose, totalAmount, onConfirm, clienteId }) {
+function PaymentModal({ isOpen, onClose, totalAmount, clienteId, onConfirm }) {
     const { isDark } = useTheme();
 
-    // Estado principal
     const [selectedMethod, setSelectedMethod] = useState('dinheiro');
     const [paymentData, setPaymentData] = useState({
-        dinheiro: { valor: 0 },
-        cartao_credito: { valor: 0, parcelas: 1 },
-        cartao_debito: { valor: 0 },
-        pix: { valor: 0 },
-        crediario: {
-            valor: 0,
-            numParcelas: 12,
-            primeiroVencimento: '',
-            modoCrediario: 'PADRAO'
-        }
+        dinheiro: { valorRecebido: totalAmount },
+        cartao_credito: { parcelas: 1 },
+        cartao_debito: {},
+        pix: {},
+        crediario: { modoCrediario: 'PADRAO', numParcelas: 2, primeiroVencimento: '' }
     });
 
-    // Reset ao abrir - SEM totalAmount nas dependências!
+    const bgOverlay = 'rgba(0, 0, 0, 0.5)';
+    const bgModal = isDark ? '#1e293b' : '#ffffff';
+    const textPrimary = isDark ? '#f1f5f9' : '#1f2937';
+    const textSecondary = isDark ? '#94a3b8' : '#6b7280';
+    const borderColor = isDark ? '#334155' : '#e5e7eb';
+
+    // Reset ao abrir
     useEffect(() => {
         if (isOpen) {
-            const nextMonth = new Date();
-            nextMonth.setMonth(nextMonth.getMonth() + 1);
-            const nextMonthStr = nextMonth.toISOString().split('T')[0];
-
             setSelectedMethod('dinheiro');
             setPaymentData({
-                dinheiro: { valor: totalAmount },
-                cartao_credito: { valor: totalAmount, parcelas: 1 },
-                cartao_debito: { valor: totalAmount },
-                pix: { valor: totalAmount },
-                crediario: {
-                    valor: totalAmount,
-                    numParcelas: 12,
-                    primeiroVencimento: nextMonthStr,
-                    modoCrediario: 'PADRAO'
-                }
+                dinheiro: { valorRecebido: totalAmount },
+                cartao_credito: { parcelas: 1 },
+                cartao_debito: {},
+                pix: {},
+                crediario: { modoCrediario: 'PADRAO', numParcelas: 2, primeiroVencimento: '' }
             });
         }
-    }, [isOpen]); // Sem totalAmount!
-
-    // ESC para fechar
-    useEffect(() => {
-        const handleEsc = (e) => {
-            if (e.key === 'Escape' && isOpen) onClose();
-        };
-        window.addEventListener('keydown', handleEsc);
-        return () => window.removeEventListener('keydown', handleEsc);
-    }, [isOpen, onClose]);
-
-    const handleConfirm = () => {
-        // Validações
-        if (selectedMethod === 'crediario' && !clienteId) {
-            alert('❌ Crediário requer um cliente selecionado!');
-            return;
-        }
-
-        if (selectedMethod === 'crediario' && !paymentData.crediario.primeiroVencimento) {
-            alert('❌ Informe a data do primeiro vencimento!');
-            return;
-        }
-
-        // Preparar dados para envio - cada método envia apenas o necessário
-        let result = {
-            formaPagamento: selectedMethod
-        };
-
-        // Adicionar dados específicos apenas para crediário
-        if (selectedMethod === 'crediario') {
-            result.modoCrediario = paymentData.crediario.modoCrediario;
-            result.numParcelas = paymentData.crediario.numParcelas;
-            result.primeiroVencimento = paymentData.crediario.primeiroVencimento;
-        }
-
-        // Para cartão de crédito, adicionar parcelas
-        if (selectedMethod === 'cartao_credito') {
-            result.parcelas = paymentData.cartao_credito.parcelas;
-        }
-
-        onConfirm(result);
-    };
+    }, [isOpen, totalAmount]);
 
     if (!isOpen) return null;
 
-    // Theme colors
-    const cardBg = isDark ? '#1e293b' : '#ffffff';
-    const overlayBg = isDark ? 'rgba(15, 23, 42, 0.75)' : 'rgba(0, 0, 0, 0.5)';
-    const textPrimary = isDark ? '#f1f5f9' : '#0f172a';
-    const textSecondary = isDark ? '#cbd5e1' : '#64748b';
-    const borderColor = isDark ? '#334155' : '#e5e7eb';
-    const bgSecondary = isDark ? '#334155' : '#f9fafb';
+    const handleConfirm = () => {
+        const data = paymentData[selectedMethod];
+
+        // Montar payload baseado no método
+        let payload = { formaPagamento: selectedMethod };
+
+        if (selectedMethod === 'cartao_credito') {
+            payload.parcelas = data.parcelas;
+        } else if (selectedMethod === 'crediario') {
+            payload.modoCrediario = data.modoCrediario;
+            payload.numParcelas = data.numParcelas;
+            payload.primeiroVencimento = data.primeiroVencimento;
+        }
+
+        onConfirm(payload);
+    };
+
+    const updatePaymentData = (method, field, value) => {
+        setPaymentData({
+            ...paymentData,
+            [method]: {
+                ...paymentData[method],
+                [field]: value
+            }
+        });
+    };
+
+    // Cálculo do troco
+    const troco = selectedMethod === 'dinheiro'
+        ? Math.max(0, (paymentData.dinheiro.valorRecebido || 0) - totalAmount)
+        : 0;
+
+    // Validação de crediário
+    const crediarioInvalid = selectedMethod === 'crediario' && !clienteId;
+
+    // Botão desabilitado?
+    const isDisabled =
+        (selectedMethod === 'dinheiro' && paymentData.dinheiro.valorRecebido < totalAmount) ||
+        (selectedMethod === 'crediario' && (!clienteId || !paymentData.crediario.primeiroVencimento)) ||
+        (selectedMethod === 'crediario' && paymentData.crediario.numParcelas < 1);
+
+    // Métodos de pagamento
+    const paymentMethods = [
+        { id: 'dinheiro', label: 'Dinheiro', icon: DollarSign, color: '#10b981' },
+        { id: 'cartao_credito', label: 'Crédito', icon: CreditCard, color: '#8b5cf6' },
+        { id: 'cartao_debito', label: 'Débito', icon: CreditCard, color: '#f59e0b' },
+        { id: 'pix', label: 'PIX', icon: Smartphone, color: '#a855f7' },
+        { id: 'crediario', label: 'Crediário', icon: Calendar, color: '#ec4899' }
+    ];
 
     return (
         <div style={{
             position: 'fixed',
-            inset: 0,
-            backgroundColor: overlayBg,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: bgOverlay,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1000,
+            zIndex: 9999,
             backdropFilter: 'blur(4px)'
-        }} onClick={onClose}>
+        }}>
             <div style={{
-                backgroundColor: cardBg,
+                backgroundColor: bgModal,
                 borderRadius: '16px',
                 width: '90%',
                 maxWidth: '600px',
                 maxHeight: '90vh',
-                overflowY: 'auto',
-                boxShadow: isDark ? '0 20px 25px -5px rgba(0, 0, 0, 0.5)' : '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
-                border: `1px solid ${borderColor}`
-            }} onClick={(e) => e.stopPropagation()}>
+                overflow: 'hidden',
+                boxShadow: isDark
+                    ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                    : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
                 {/* Header */}
                 <div style={{
                     padding: '1.5rem',
@@ -127,320 +127,361 @@ function PaymentModal({ isOpen, onClose, totalAmount, onConfirm, clienteId }) {
                     justifyContent: 'space-between',
                     alignItems: 'center'
                 }}>
-                    <h2 style={{ fontSize: '24px', fontWeight: '700', color: textPrimary, margin: 0 }}>
+                    <h2 style={{
+                        fontSize: '20px',
+                        fontWeight: '700',
+                        color: textPrimary,
+                        margin: 0
+                    }}>
                         💳 Finalizar Pagamento
                     </h2>
-                    <button onClick={onClose} style={{
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '4px',
-                        color: textSecondary
-                    }}>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            color: textSecondary,
+                            transition: 'color 150ms'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = textSecondary}
+                    >
                         <X size={24} />
                     </button>
                 </div>
 
-                {/* Body */}
-                <div style={{ padding: '1.5rem' }}>
-                    {/* Total */}
+                {/* Body - Scrollable */}
+                <div style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: '2rem'
+                }}>
+                    {/* Total com fundo lavanda */}
                     <div style={{
-                        padding: '1rem',
-                        backgroundColor: bgSecondary,
+                        background: 'linear-gradient(135deg, #A48FFF 0%, #9370DB 100%)',
+                        padding: '2rem',
                         borderRadius: '12px',
-                        marginBottom: '1.5rem',
+                        marginBottom: '2rem',
                         textAlign: 'center'
                     }}>
-                        <p style={{ fontSize: '14px', color: textSecondary, marginBottom: '0.5rem' }}>Total a pagar</p>
-                        <p style={{ fontSize: '36px', fontWeight: '700', color: '#8b5cf6', margin: 0 }}>
+                        <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.9)', marginBottom: '0.5rem', fontWeight: '500' }}>
+                            Total a pagar
+                        </p>
+                        <p style={{ fontSize: '42px', fontWeight: '800', color: '#ffffff', margin: 0, letterSpacing: '-1px' }}>
                             R$ {totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
                     </div>
 
-                    {/* Payment Methods Tabs */}
+                    {/* Payment Methods */}
                     <div style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
-                        gap: '0.5rem',
-                        marginBottom: '1.5rem'
+                        gap: '12px',
+                        marginBottom: '2rem'
                     }}>
-                        {[
-                            { id: 'dinheiro', label: 'Dinheiro', icon: DollarSign, color: '#10b981' },
-                            { id: 'cartao_credito', label: 'Crédito', icon: CreditCard, color: '#8b5cf6' },
-                            { id: 'cartao_debito', label: 'Débito', icon: CreditCard, color: '#f59e0b' },
-                            { id: 'pix', label: 'PIX', icon: Smartphone, color: '#a855f7' },
-                            { id: 'crediario', label: 'Crediário', icon: Calendar, color: '#ec4899' }
-                        ].map(({ id, label, icon: Icon, color }) => (
-                            <button
-                                key={id}
-                                onClick={() => setSelectedMethod(id)}
-                                style={{
-                                    padding: '0.75rem',
-                                    border: `2px solid ${selectedMethod === id ? color : borderColor}`,
-                                    borderRadius: '8px',
-                                    background: selectedMethod === id ? `${color}15` : 'transparent',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '0.25rem',
-                                    transition: 'all 0.2s'
-                                }}
-                            >
-                                <Icon size={20} color={selectedMethod === id ? color : textSecondary} />
-                                <span style={{
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    color: selectedMethod === id ? color : textSecondary
-                                }}>
-                                    {label}
-                                </span>
-                            </button>
+                        {paymentMethods.map(method => (
+                            <PaymentMethodButton
+                                key={method.id}
+                                id={method.id}
+                                label={method.label}
+                                icon={method.icon}
+                                color={method.color}
+                                isActive={selectedMethod === method.id}
+                                onClick={() => setSelectedMethod(method.id)}
+                            />
                         ))}
                     </div>
 
-                    {/* Payment Form */}
+                    {/* Método-specific inputs */}
                     <div style={{
-                        border: `1px solid ${borderColor}`,
-                        borderRadius: '12px',
+                        backgroundColor: isDark ? '#0f172a' : '#f9fafb',
                         padding: '1.5rem',
-                        backgroundColor: bgSecondary
+                        borderRadius: '10px',
+                        border: `1px solid ${borderColor}`
                     }}>
                         {/* DINHEIRO */}
                         {selectedMethod === 'dinheiro' && (
                             <div>
-                                <label style={{ fontSize: '14px', fontWeight: '600', color: textPrimary, display: 'block', marginBottom: '0.5rem' }}>
+                                <label style={{
+                                    display: 'block',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    color: textPrimary,
+                                    marginBottom: '8px'
+                                }}>
                                     💵 Valor Recebido
                                 </label>
                                 <input
                                     type="number"
                                     step="0.01"
-                                    min="0"
-                                    value={paymentData.dinheiro.valor || ''}
-                                    onChange={(e) => setPaymentData({
-                                        ...paymentData,
-                                        dinheiro: { valor: parseFloat(e.target.value) || 0 }
-                                    })}
-                                    autoFocus
+                                    value={paymentData.dinheiro.valorRecebido}
+                                    onChange={(e) => updatePaymentData('dinheiro', 'valorRecebido', parseFloat(e.target.value) || 0)}
                                     style={{
-                                        pointerEvents: 'auto',
-                                        fontSize: '18px',
-                                        padding: '0.75rem',
                                         width: '100%',
-                                        border: `1px solid ${borderColor}`,
+                                        padding: '14px',
+                                        fontSize: '18px',
+                                        fontWeight: '600',
+                                        border: `2px solid ${borderColor}`,
                                         borderRadius: '8px',
-                                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                                        color: textPrimary
+                                        backgroundColor: bgModal,
+                                        color: textPrimary,
+                                        outline: 'none',
+                                        transition: 'border-color 150ms'
                                     }}
+                                    onFocus={(e) => e.currentTarget.style.borderColor = '#10b981'}
+                                    onBlur={(e) => e.currentTarget.style.borderColor = borderColor}
                                 />
-                                {paymentData.dinheiro.valor > totalAmount && (
-                                    <p style={{ marginTop: '0.75rem', fontSize: '16px', fontWeight: '600', color: '#10b981' }}>
-                                        💵 Troco: R$ {(paymentData.dinheiro.valor - totalAmount).toFixed(2)}
-                                    </p>
+                                {troco > 0 && (
+                                    <div style={{
+                                        marginTop: '16px',
+                                        padding: '12px',
+                                        backgroundColor: '#d1fae5',
+                                        borderRadius: '8px',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+                                    }}>
+                                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#065f46' }}>
+                                            💰 Troco
+                                        </span>
+                                        <span style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>
+                                            R$ {troco.toFixed(2)}
+                                        </span>
+                                    </div>
                                 )}
                             </div>
                         )}
 
-                        {/* CARTÃO CRÉDITO */}
+                        {/* CRÉDITO */}
                         {selectedMethod === 'cartao_credito' && (
                             <div>
-                                <label style={{ fontSize: '14px', fontWeight: '600', color: textPrimary, display: 'block', marginBottom: '0.5rem' }}>
+                                <label style={{
+                                    display: 'block',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    color: textPrimary,
+                                    marginBottom: '8px'
+                                }}>
                                     💳 Número de Parcelas
                                 </label>
                                 <select
                                     value={paymentData.cartao_credito.parcelas}
-                                    onChange={(e) => setPaymentData({
-                                        ...paymentData,
-                                        cartao_credito: { ...paymentData.cartao_credito, parcelas: parseInt(e.target.value) }
-                                    })}
+                                    onChange={(e) => updatePaymentData('cartao_credito', 'parcelas', parseInt(e.target.value))}
                                     style={{
-                                        pointerEvents: 'auto',
                                         width: '100%',
-                                        padding: '0.75rem',
+                                        padding: '14px',
                                         fontSize: '16px',
-                                        border: `1px solid ${borderColor}`,
+                                        fontWeight: '600',
+                                        border: `2px solid ${borderColor}`,
                                         borderRadius: '8px',
-                                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                                        backgroundColor: bgModal,
                                         color: textPrimary,
-                                        cursor: 'pointer'
+                                        cursor: 'pointer',
+                                        outline: 'none'
                                     }}
                                 >
-                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12].map(n => (
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
                                         <option key={n} value={n}>
-                                            {n}x de R$ {(totalAmount / n).toFixed(2)} {n > 1 && '(sem juros)'}
+                                            {n}x de R$ {(totalAmount / n).toFixed(2)}
                                         </option>
                                     ))}
                                 </select>
                             </div>
                         )}
 
-                        {/* CARTÃO DÉBITO */}
+                        {/* DÉBITO */}
                         {selectedMethod === 'cartao_debito' && (
-                            <div style={{ textAlign: 'center', padding: '1rem' }}>
-                                <CreditCard size={48} color="#f59e0b" style={{ marginBottom: '1rem' }} />
-                                <p style={{ fontSize: '16px', fontWeight: '600', color: textPrimary }}>
+                            <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                                <CreditCard size={48} color="#f59e0b" style={{ marginBottom: '12px' }} />
+                                <p style={{ fontSize: '16px', fontWeight: '600', color: textPrimary, marginBottom: '4px' }}>
                                     Cartão de Débito
                                 </p>
                                 <p style={{ fontSize: '14px', color: textSecondary }}>
-                                    Valor: R$ {totalAmount.toFixed(2)}
+                                    Pagamento à vista
                                 </p>
                             </div>
                         )}
 
                         {/* PIX */}
                         {selectedMethod === 'pix' && (
-                            <div style={{ textAlign: 'center', padding: '1rem' }}>
-                                <Smartphone size={48} color="#8b5cf6" style={{ marginBottom: '1rem' }} />
-                                <p style={{ fontSize: '16px', fontWeight: '600', color: textPrimary }}>
-                                    Pagamento via PIX
-                                </p>
-                                <p style={{ fontSize: '14px', color: textSecondary }}>
-                                    Valor: R$ {totalAmount.toFixed(2)}
-                                </p>
-                            </div>
+                            <PixPayment
+                                valor={totalAmount}
+                                onPixGenerated={(data) => {
+                                    // Dados do PIX gerados com sucesso
+                                    console.log('PIX gerado:', data);
+                                }}
+                            />
                         )}
 
-                        {/* 🪷 CREDIÁRIO */}
+                        {/* CREDIÁRIO */}
                         {selectedMethod === 'crediario' && (
                             <div>
-                                {!clienteId && (
+                                {crediarioInvalid && (
                                     <div style={{
-                                        padding: '1rem',
-                                        backgroundColor: isDark ? '#7f1d1d' : '#fef2f2',
-                                        border: '2px solid #ef4444',
+                                        padding: '12px',
+                                        backgroundColor: '#fee2e2',
                                         borderRadius: '8px',
-                                        marginBottom: '1rem'
+                                        marginBottom: '16px',
+                                        border: '1px solid #ef4444'
                                     }}>
-                                        <p style={{ fontSize: '14px', fontWeight: '600', color: '#ef4444', margin: 0 }}>
-                                            ⚠️ Selecione um cliente antes de usar crediário!
+                                        <p style={{ fontSize: '14px', fontWeight: '600', color: '#991b1b', margin: 0 }}>
+                                            ⚠️ Selecione um cliente para usar crediário
                                         </p>
                                     </div>
                                 )}
 
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    {/* Número de Parcelas */}
-                                    <div>
-                                        <label style={{ fontSize: '14px', fontWeight: '600', color: textPrimary, display: 'block', marginBottom: '0.5rem' }}>
-                                            📅 Número de Parcelas
-                                        </label>
-                                        <select
-                                            value={paymentData.crediario.numParcelas}
-                                            onChange={(e) => setPaymentData({
-                                                ...paymentData,
-                                                crediario: { ...paymentData.crediario, numParcelas: parseInt(e.target.value) }
-                                            })}
-                                            disabled={!clienteId}
-                                            style={{
-                                                pointerEvents: clienteId ? 'auto' : 'none',
-                                                width: '100%',
-                                                padding: '0.75rem',
-                                                fontSize: '16px',
-                                                border: `1px solid ${borderColor}`,
-                                                borderRadius: '8px',
-                                                backgroundColor: clienteId ? (isDark ? '#1e293b' : '#ffffff') : (isDark ? '#0f172a' : '#f3f4f6'),
-                                                color: clienteId ? textPrimary : textSecondary,
-                                                cursor: clienteId ? 'pointer' : 'not-allowed'
-                                            }}
-                                        >
-                                            {[3, 6, 9, 10, 12, 15, 18, 24].map(n => (
-                                                <option key={n} value={n}>{n}x</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {/* Primeiro Vencimento */}
-                                    <div>
-                                        <label style={{ fontSize: '14px', fontWeight: '600', color: textPrimary, display: 'block', marginBottom: '0.5rem' }}>
-                                            📆 Primeiro Vencimento
-                                        </label>
-                                        <input
-                                            type="date"
-                                            value={paymentData.crediario.primeiroVencimento}
-                                            onChange={(e) => setPaymentData({
-                                                ...paymentData,
-                                                crediario: { ...paymentData.crediario, primeiroVencimento: e.target.value }
-                                            })}
-                                            disabled={!clienteId}
-                                            style={{
-                                                pointerEvents: clienteId ? 'auto' : 'none',
-                                                width: '100%',
-                                                padding: '0.75rem',
-                                                fontSize: '16px',
-                                                border: `1px solid ${borderColor}`,
-                                                borderRadius: '8px',
-                                                backgroundColor: clienteId ? (isDark ? '#1e293b' : '#ffffff') : (isDark ? '#0f172a' : '#f3f4f6'),
-                                                color: clienteId ? textPrimary : textSecondary,
-                                                cursor: clienteId ? 'text' : 'not-allowed'
-                                            }}
-                                        />
-                                    </div>
-
-                                    {/* Preview */}
-                                    {clienteId && (
-                                        <div style={{
-                                            padding: '1rem',
-                                            backgroundColor: isDark ? '#5b21b6' : '#faf5ff',
+                                <div style={{ marginBottom: '16px' }}>
+                                    <label style={{
+                                        display: 'block',
+                                        fontSize: '14px',
+                                        fontWeight: '600',
+                                        color: textPrimary,
+                                        marginBottom: '8px'
+                                    }}>
+                                        📊 Número de Parcelas
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="24"
+                                        value={paymentData.crediario.numParcelas}
+                                        onChange={(e) => updatePaymentData('crediario', 'numParcelas', parseInt(e.target.value) || 1)}
+                                        disabled={!clienteId}
+                                        style={{
+                                            width: '100%',
+                                            padding: '14px',
+                                            fontSize: '16px',
+                                            fontWeight: '600',
+                                            border: `2px solid ${borderColor}`,
                                             borderRadius: '8px',
-                                            border: `2px solid #8b5cf6`
-                                        }}>
-                                            <p style={{ fontSize: '12px', fontWeight: '600', color: '#8b5cf6', marginBottom: '0.5rem' }}>
-                                                💡 Prévia (Taxa Padrão 8% a.m.)
-                                            </p>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                                                <span style={{ fontSize: '14px', color: textSecondary }}>Valor Original:</span>
-                                                <span style={{ fontSize: '14px', fontWeight: '600', color: textPrimary }}>
-                                                    R$ {totalAmount.toFixed(2)}
-                                                </span>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ fontSize: '14px', color: textSecondary }}>Parcelas:</span>
-                                                <span style={{ fontSize: '14px', fontWeight: '600', color: '#ec4899' }}>
-                                                    {paymentData.crediario.numParcelas}x (calculado no checkout)
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
+                                            backgroundColor: bgModal,
+                                            color: textPrimary,
+                                            outline: 'none',
+                                            opacity: !clienteId ? 0.5 : 1
+                                        }}
+                                    />
                                 </div>
+
+                                <div>
+                                    <label style={{
+                                        display: 'block',
+                                        fontSize: '14px',
+                                        fontWeight: '600',
+                                        color: textPrimary,
+                                        marginBottom: '8px'
+                                    }}>
+                                        📅 Primeiro Vencimento
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={paymentData.crediario.primeiroVencimento}
+                                        onChange={(e) => updatePaymentData('crediario', 'primeiroVencimento', e.target.value)}
+                                        disabled={!clienteId}
+                                        style={{
+                                            width: '100%',
+                                            padding: '14px',
+                                            fontSize: '16px',
+                                            fontWeight: '600',
+                                            border: `2px solid ${borderColor}`,
+                                            borderRadius: '8px',
+                                            backgroundColor: bgModal,
+                                            color: textPrimary,
+                                            outline: 'none',
+                                            opacity: !clienteId ? 0.5 : 1
+                                        }}
+                                    />
+                                </div>
+
+                                {clienteId && paymentData.crediario.numParcelas > 0 && (
+                                    <div style={{
+                                        marginTop: '16px',
+                                        padding: '12px',
+                                        backgroundColor: isDark ? '#5b21b6' : '#faf5ff',
+                                        borderRadius: '8px',
+                                        border: '2px solid #ec4899'
+                                    }}>
+                                        <p style={{ fontSize: '12px', fontWeight: '600', color: '#ec4899', marginBottom: '8px' }}>
+                                            💡 Prévia (Taxa Padrão 8% a.m.)
+                                        </p>
+                                        <div style={{ fontSize: '13px', color: textSecondary }}>
+                                            {paymentData.crediario.numParcelas}x de ~R$ {(totalAmount / paymentData.crediario.numParcelas * 1.08).toFixed(2)}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
+                </div>
 
-                    {/* Actions */}
-                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                        <button
-                            onClick={onClose}
-                            style={{
-                                flex: 1,
-                                padding: '0.75rem',
-                                borderRadius: '8px',
-                                border: `2px solid ${borderColor}`,
-                                background: 'transparent',
-                                color: textPrimary,
-                                fontSize: '16px',
-                                fontWeight: '600',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            onClick={handleConfirm}
-                            style={{
-                                flex: 2,
-                                padding: '0.75rem',
-                                borderRadius: '8px',
-                                border: 'none',
-                                background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                                color: '#ffffff',
-                                fontSize: '16px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                            }}
-                        >
-                            ✅ Confirmar Pagamento
-                        </button>
-                    </div>
+                {/* Footer */}
+                <div style={{
+                    padding: '1.5rem',
+                    borderTop: `1px solid ${borderColor}`,
+                    display: 'flex',
+                    gap: '12px'
+                }}>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            flex: 1,
+                            padding: '14px',
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            border: `2px solid ${borderColor}`,
+                            borderRadius: '8px',
+                            background: 'transparent',
+                            color: textSecondary,
+                            cursor: 'pointer',
+                            transition: 'all 150ms'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = isDark ? '#1e293b' : '#f3f4f6';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        onClick={handleConfirm}
+                        disabled={isDisabled}
+                        style={{
+                            flex: 2,
+                            padding: '14px',
+                            fontSize: '16px',
+                            fontWeight: '700',
+                            border: 'none',
+                            borderRadius: '8px',
+                            background: isDisabled
+                                ? (isDark ? '#334155' : '#e5e7eb')
+                                : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                            color: isDisabled ? textSecondary : '#ffffff',
+                            cursor: isDisabled ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            transition: 'all 150ms',
+                            opacity: isDisabled ? 0.5 : 1
+                        }}
+                        onMouseEnter={(e) => {
+                            if (!isDisabled) {
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.4)';
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'none';
+                        }}
+                    >
+                        <Check size={20} />
+                        Confirmar Pagamento
+                    </button>
                 </div>
             </div>
         </div>

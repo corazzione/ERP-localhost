@@ -2,17 +2,25 @@ import jwt from 'jsonwebtoken';
 
 export const authMiddleware = (req, res, next) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
+        const authHeader = req.headers.authorization;
+        console.log('🔐 Auth Header:', authHeader ? 'Presente' : 'Ausente');
+
+        const token = authHeader?.split(' ')[1];
+        console.log('🎫 Token extraído:', token ? `${token.substring(0, 20)}...` : 'Nenhum');
 
         if (!token) {
+            console.log('❌ Token não fornecido');
             return res.status(401).json({ error: 'Token não fornecido' });
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log('✅ Token válido para userId:', decoded.userId);
+
         req.userId = decoded.userId;
         req.userRole = decoded.role;
         next();
     } catch (error) {
+        console.log('❌ Erro ao verificar token:', error.message);
         return res.status(401).json({ error: 'Token inválido' });
     }
 };

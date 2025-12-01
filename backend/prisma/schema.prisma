@@ -417,3 +417,18 @@ model ItemPedidoCompra {
   pedidoCompra    PedidoCompra @relation(fields: [pedidoCompraId], references: [id], onDelete: Cascade)
   produto         Produto      @relation(fields: [produtoId], references: [id])
 }
+
+// ===== CONFIGURAÇÃO PIX =====
+model PixConfig {
+  id              Int      @id @default(autoincrement())
+  nomeRecebedor   String
+  chavePix        String
+  cidade          String
+  descricaoPadrao String   @default("Venda Lótus Core")
+  nomeLoja        String
+  ativo           Boolean  @default(true)
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  @@map("pix_config")
+}

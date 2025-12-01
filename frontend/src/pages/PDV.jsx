@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    ShoppingCart, LogOut, Search, ShoppingBag, User, UserPlus,
-    Trash2, CreditCard, FileText
+    ShoppingCart, LogOut, Search, ShoppingBag, CreditCard, FileText, Trash2
 } from 'lucide-react';
 import api from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
@@ -12,7 +11,11 @@ import printReceipt from '../utils/printReceipt';
 import BarcodeInput from '../components/BarcodeInput';
 import PaymentModal from '../components/PaymentModal';
 import QuickClientModal from '../components/QuickClientModal';
-import CartItem from '../components/CartItem';
+import ProductCard from '../components/pdv/ProductCard';
+import CartItemCard from '../components/pdv/CartItemCard';
+import ClientSelector from '../components/pdv/ClientSelector';
+import ClientBadge from '../components/pdv/ClientBadge';
+import ConfirmModal from '../components/ConfirmModal';
 
 function PDV() {
     const navigate = useNavigate();
@@ -30,6 +33,7 @@ function PDV() {
     const [showQuickClient, setShowQuickClient] = useState(false);
     const [descontoGlobal, setDescontoGlobal] = useState(0);
     const [acrescimo, setAcrescimo] = useState(0);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
 
     // Theme colors
     const bgMain = isDark ? '#0f172a' : '#f8fafc';
@@ -140,11 +144,16 @@ function PDV() {
                 status: 'concluida'
             };
 
-            // 🪷 Se for crediário, adicionar dados específicos
+            // Se for crediário, adicionar dados específicos
             if (paymentData.formaPagamento === 'crediario') {
                 vendaData.modoCrediario = paymentData.modoCrediario || 'PADRAO';
                 vendaData.numParcelas = paymentData.numParcelas;
                 vendaData.primeiroVencimento = paymentData.primeiroVencimento;
+            }
+
+            // Se for crédito, adicionar parcelas
+            if (paymentData.formaPagamento === 'cartao_credito' && paymentData.parcelas) {
+                vendaData.parcelas = paymentData.parcelas;
             }
 
             const response = await api.post('/vendas', vendaData);
@@ -173,6 +182,13 @@ function PDV() {
     };
 
     const handleSaveAsBudget = async () => {
+        if (carrinho.length === 0) {
+            showToast('Adicione produtos ao carrinho primeiro', 'error');
+            playSound('error');
+            return;
+        }
+
+        setLoading(true);
         try {
             const subtotal = calcularSubtotal();
             const total = subtotal - descontoGlobal + acrescimo;
@@ -198,11 +214,17 @@ function PDV() {
             playSound('success');
             showToast(`Orçamento #${response.data.numero} salvo com sucesso!`, 'success');
             limparVenda();
-            navigate('/orcamentos');
+
+            // Aguardar um pouco antes de navegar para o usuário ver o toast
+            setTimeout(() => {
+                navigate('/orcamentos');
+            }, 1000);
         } catch (error) {
             console.error('Erro ao salvar orçamento:', error);
             showToast(error.response?.data?.error || 'Erro ao salvar orçamento', 'error');
             playSound('error');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -323,26 +345,17 @@ function PDV() {
                 {/* Grid de Produtos */}
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                    gap: '1rem',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: '16px',
                     overflowY: 'auto',
                     paddingBottom: '1rem'
                 }}>
                     {produtosFiltrados.map(produto => (
-                        <div
+                        <ProductCard
                             key={produto.id}
-                            className="card hover:shadow-md cursor-pointer transition-all"
+                            produto={produto}
                             onClick={() => adicionarAoCarrinho(produto)}
-                            style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}
-                        >
-                            <div>
-                                <div className="text-sm text-neutral-500 mb-1">{produto.codigo}</div>
-                                <div className="font-semibold mb-2 line-clamp-2">{produto.nome}</div>
-                            </div>
-                            <div className="font-bold text-primary-600 text-lg">
-                                R$ {parseFloat(produto.precoVenda).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </div>
-                        </div>
+                        />
                     ))}
                 </div>
             </div>
@@ -356,81 +369,19 @@ function PDV() {
                         <h2 style={{ fontSize: '20px', fontWeight: '700', color: textPrimary, margin: 0 }}>Carrinho</h2>
                     </div>
 
-                    {/* 🪷 Cliente Selector */}
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {/* Cliente Selector */}
+                    <div style={{ marginBottom: '0rem' }}>
                         {clienteSelecionado ? (
-                            <div style={{
-                                flex: 1,
-                                padding: '0.5rem',
-                                backgroundColor: isDark ? '#5b21b6' : '#faf5ff',
-                                borderRadius: '6px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <User size={16} color="#8b5cf6" />
-                                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#8b5cf6' }}>
-                                        {clienteSelecionado.nome}
-                                    </span>
-                                </div>
-                                <button
-                                    onClick={() => setClienteSelecionado(null)}
-                                    style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        color: '#ef4444',
-                                        cursor: 'pointer',
-                                        padding: '2px'
-                                    }}
-                                    title="Remover cliente (F5)"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            </div>
+                            <ClientBadge
+                                cliente={clienteSelecionado}
+                                onRemove={() => setClienteSelecionado(null)}
+                            />
                         ) : (
-                            <>
-                                <select
-                                    value=""
-                                    onChange={(e) => {
-                                        const cliente = clientes.find(c => c.id === parseInt(e.target.value));
-                                        if (cliente) {
-                                            setClienteSelecionado(cliente);
-                                            playSound('success');
-                                        }
-                                    }}
-                                    style={{
-                                        flex: 1,
-                                        padding: '0.5rem',
-                                        border: `1px solid ${borderColor}`,
-                                        borderRadius: '6px',
-                                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                                        color: textPrimary,
-                                        fontSize: '14px',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    <option value="">👤 Selecionar Cliente...</option>
-                                    {clientes.map(cliente => (
-                                        <option key={cliente.id} value={cliente.id}>
-                                            {cliente.nome} {cliente.cpf ? `- ${cliente.cpf}` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                                <button
-                                    className="btn btn-outline"
-                                    onClick={() => setShowQuickClient(true)}
-                                    style={{
-                                        padding: '0.5rem',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
-                                    title="Cadastrar novo cliente (F5)"
-                                >
-                                    <UserPlus size={16} />
-                                </button>
-                            </>
+                            <ClientSelector
+                                clientes={clientes}
+                                onSelect={setClienteSelecionado}
+                                onNewClient={() => setShowQuickClient(true)}
+                            />
                         )}
                     </div>
                 </div>
@@ -439,13 +390,14 @@ function PDV() {
                 <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
                     {carrinho.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-neutral-400">
-                            <p>Carrinho vazio</p>
+                            <ShoppingBag size={64} style={{ opacity: 0.3, marginBottom: '16px' }} />
+                            <p style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>Carrinho vazio</p>
                             <p className="text-sm">Adicione produtos para começar</p>
                         </div>
                     ) : (
-                        <div className="flex flex-col gap-3">
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
                             {carrinho.map(item => (
-                                <CartItem
+                                <CartItemCard
                                     key={item.id}
                                     item={item}
                                     onUpdateQuantity={updateItemQuantity}
@@ -527,12 +479,7 @@ function PDV() {
                             <button
                                 className="btn btn-outline"
                                 disabled={carrinho.length === 0}
-                                onClick={() => {
-                                    if (window.confirm('Limpar carrinho?')) {
-                                        limparVenda();
-                                        playSound('error');
-                                    }
-                                }}
+                                onClick={() => setShowClearConfirm(true)}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
@@ -565,6 +512,18 @@ function PDV() {
                     setClienteSelecionado(newClient);
                     setClientes([...clientes, newClient]);
                 }}
+            />
+
+            <ConfirmModal
+                isOpen={showClearConfirm}
+                onClose={() => setShowClearConfirm(false)}
+                onConfirm={() => {
+                    limparVenda();
+                    playSound('error');
+                }}
+                title="Limpar Carrinho"
+                message="Tem certeza que deseja limpar todos os itens do carrinho? Esta ação não pode ser desfeita."
+                type="warning"
             />
         </div>
     );

@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useToast } from './Toast';
 import api from '../services/api';
 import { playSound } from '../utils/sounds';
+import { validarCPF, validarCNPJ, formatarCPF, formatarTelefone } from '../utils/validators';
 
 function QuickClientModal({ isOpen, onClose, onClientCreated }) {
     const { isDark } = useTheme();
+    const { showToast } = useToast();
     const [formData, setFormData] = useState({
         nome: '',
-        cpf: '',
+        cpfCnpj: '',
         telefone: ''
     });
     const [loading, setLoading] = useState(false);
@@ -21,11 +24,32 @@ function QuickClientModal({ isOpen, onClose, onClientCreated }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
 
+        // Validar CPF/CNPJ se fornecido
+        if (formData.cpfCnpj) {
+            const cleanCPF = formData.cpfCnpj.replace(/\D/g, '');
+            if (cleanCPF.length === 11 && !validarCPF(formData.cpfCnpj)) {
+                showToast('CPF inválido', 'error');
+                playSound('error');
+                return;
+            }
+            if (cleanCPF.length === 14 && !validarCNPJ(formData.cpfCnpj)) {
+                showToast('CNPJ inválido', 'error');
+                playSound('error');
+                return;
+            }
+            if (cleanCPF.length > 0 && cleanCPF.length !== 11 && cleanCPF.length !== 14) {
+                showToast('CPF/CNPJ deve ter 11 ou 14 dígitos', 'error');
+                playSound('error');
+                return;
+            }
+        }
+
+        setLoading(true);
         try {
             const response = await api.post('/clientes', formData);
             playSound('success');
+            showToast('Cliente cadastrado com sucesso!', 'success');
             if (onClientCreated) {
                 onClientCreated(response.data);
             }
@@ -33,15 +57,30 @@ function QuickClientModal({ isOpen, onClose, onClientCreated }) {
         } catch (error) {
             console.error('Erro ao criar cliente:', error);
             playSound('error');
-            alert(error.response?.data?.error || 'Erro ao criar cliente');
+            showToast(error.response?.data?.error || 'Erro ao criar cliente', 'error');
         } finally {
             setLoading(false);
         }
     };
 
     const handleClose = () => {
-        setFormData({ nome: '', cpf: '', telefone: '' });
+        setFormData({ nome: '', cpfCnpj: '', telefone: '' });
         onClose();
+    };
+
+    const handleCPFChange = (value) => {
+        const cleaned = value.replace(/\D/g, '');
+        if (cleaned.length <= 14) {
+            if (cleaned.length <= 11) {
+                setFormData({ ...formData, cpfCnpj: formatarCPF(value) });
+            } else {
+                setFormData({ ...formData, cpfCnpj: value });
+            }
+        }
+    };
+
+    const handlePhoneChange = (value) => {
+        setFormData({ ...formData, telefone: formatarTelefone(value) });
     };
 
     return (
@@ -110,12 +149,12 @@ function QuickClientModal({ isOpen, onClose, onClientCreated }) {
                             </div>
 
                             <div>
-                                <label className="label">CPF</label>
+                                <label className="label">CPF/CNPJ</label>
                                 <input
                                     type="text"
                                     className="input"
-                                    value={formData.cpf}
-                                    onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                                    value={formData.cpfCnpj}
+                                    onChange={(e) => handleCPFChange(e.target.value)}
                                     placeholder="000.000.000-00"
                                 />
                             </div>
@@ -126,7 +165,7 @@ function QuickClientModal({ isOpen, onClose, onClientCreated }) {
                                     type="text"
                                     className="input"
                                     value={formData.telefone}
-                                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                                    onChange={(e) => handlePhoneChange(e.target.value)}
                                     placeholder="(00) 00000-0000"
                                 />
                             </div>

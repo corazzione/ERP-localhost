@@ -17,7 +17,9 @@ import {
     CreditCard as CreditCardIcon,
     BarChart3,
     LogOut,
-    FolderKanban
+    FolderKanban,
+    Settings,
+    Smartphone
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import SidebarGroup from './SidebarGroup';
@@ -147,6 +149,10 @@ function Sidebar({ setAuth }) {
 
                 <SidebarGroup title="Reports">
                     <SidebarItem path="/relatorios" icon={BarChart3} label="Relatórios" />
+                </SidebarGroup>
+
+                <SidebarGroup title="Settings">
+                    <SidebarItem path="/configuracoes/pix" icon={Smartphone} label="Config. PIX" />
                 </SidebarGroup>
             </nav>
 

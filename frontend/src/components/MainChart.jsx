@@ -41,12 +41,15 @@ function MainChart({ revenueData, paymentMethodsData }) {
             {
                 label: 'Faturamento',
                 data: revenueData?.values || [12000, 15000, 13500, 18000, 16500, 19000, 21000],
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderColor: '#8b5cf6',
+                backgroundColor: 'rgba(139, 92, 246, 0.1)',
                 fill: true,
                 tension: 0.4,
                 pointRadius: 4,
-                pointHoverRadius: 6
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#8b5cf6',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2
             }
         ]
     };
