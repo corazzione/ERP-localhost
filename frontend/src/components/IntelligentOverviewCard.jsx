@@ -29,30 +29,13 @@ function IntelligentOverviewCard() {
             setData(response.data);
         } catch (error) {
             console.error('Erro ao carregar visão geral:', error);
-            // Fallback com dados de exemplo
-            setData({
-                heatmapData: generateMockHeatmap(),
-                topProduto: { nome: 'Produto Exemplo', valorTotal: 1250.00 },
-                diaMaisForte: { data: new Date().toISOString().split('T')[0], faturamento: 850.00 },
-                tendencia: 12.5
-            });
+            setData(null);
         } finally {
             setLoading(false);
         }
     };
 
-    const generateMockHeatmap = () => {
-        const data = [];
-        for (let i = 29; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            data.push({
-                data: date.toISOString().split('T')[0],
-                faturamento: Math.random() * 1000
-            });
-        }
-        return data;
-    };
+
 
     const formatCurrency = (value) => {
         return new Intl.NumberFormat('pt-BR', {
@@ -353,8 +336,8 @@ function IntelligentOverviewCard() {
                             : (data?.tendencia >= 0 ? 'rgba(34, 214, 126, 0.08)' : 'rgba(239, 68, 68, 0.08)'),
                         borderRadius: '10px',
                         border: `1px solid ${isDark
-                                ? (data?.tendencia >= 0 ? 'rgba(34, 214, 126, 0.3)' : 'rgba(239, 68, 68, 0.3)')
-                                : (data?.tendencia >= 0 ? 'rgba(34, 214, 126, 0.2)' : 'rgba(239, 68, 68, 0.2)')
+                            ? (data?.tendencia >= 0 ? 'rgba(34, 214, 126, 0.3)' : 'rgba(239, 68, 68, 0.3)')
+                            : (data?.tendencia >= 0 ? 'rgba(34, 214, 126, 0.2)' : 'rgba(239, 68, 68, 0.2)')
                             }`
                     }}>
                         <div style={{

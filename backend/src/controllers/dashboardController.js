@@ -39,12 +39,24 @@ export const obterDadosDashboard = async (req, res) => {
         const dataInicioAnterior = new Date(dataInicio.getTime() - duracao);
         const dataFimAnterior = new Date(dataInicio.getTime() - 1);
 
+        // Filtro de loja
+        const whereClause = {
+            dataVenda: { gte: dataInicio, lte: dataFim },
+            status: 'concluida'
+        };
+
+        if (store && store !== 'all') {
+            whereClause.lojaId = store;
+        } else {
+            // Se for 'all', considerar apenas lojas ativas
+            whereClause.loja = {
+                ativo: true
+            };
+        }
+
         // Vendas do período com detalhes
         const vendasPeriodo = await prisma.venda.findMany({
-            where: {
-                dataVenda: { gte: dataInicio, lte: dataFim },
-                status: 'concluida'
-            },
+            where: whereClause,
             include: {
                 itens: {
                     include: {
@@ -57,11 +69,24 @@ export const obterDadosDashboard = async (req, res) => {
             }
         });
 
+        console.log('Vendas found:', vendasPeriodo.length);
+        vendasPeriodo.forEach(v => console.log(`Venda ${v.id} - Loja: ${v.lojaId}`));
+
+        const whereClauseAnterior = {
+            dataVenda: { gte: dataInicioAnterior, lte: dataFimAnterior },
+            status: 'concluida'
+        };
+
+        if (store && store !== 'all') {
+            whereClauseAnterior.lojaId = store;
+        } else {
+            whereClauseAnterior.loja = {
+                ativo: true
+            };
+        }
+
         const vendasPeriodoAnterior = await prisma.venda.findMany({
-            where: {
-                dataVenda: { gte: dataInicioAnterior, lte: dataFimAnterior },
-                status: 'concluida'
-            }
+            where: whereClauseAnterior
         });
 
         const faturamentoPeriodo = vendasPeriodo.reduce((sum, v) => sum + parseFloat(v.total), 0);
@@ -241,7 +266,7 @@ export const obterDadosDashboard = async (req, res) => {
         };
 
         // Dados do gráfico
-        const dadosGrafico = await obterDadosGraficoVendas(dataInicio, dataFim);
+        const dadosGrafico = await obterDadosGraficoVendas(dataInicio, dataFim, store);
 
         res.json({
             periodo: { tipo: period, inicio: dataInicio, fim: dataFim },
@@ -256,6 +281,7 @@ export const obterDadosDashboard = async (req, res) => {
                 },
                 porDia: dadosGrafico
             },
+
             financeiro: {
                 receber30Dias: totalEntradas * 0.4,
                 pagar30Dias: totalSaidas * 0.5,
@@ -329,12 +355,23 @@ export const obterVisaoGeralInteligente = async (req, res) => {
         const dataInicioAnterior = new Date(dataInicio.getTime() - duracao - 86400000); // -1 dia extra
         const dataFimAnterior = new Date(dataInicio.getTime() - 1);
 
+        // Filtro de loja
+        const whereClause = {
+            dataVenda: { gte: dataInicio, lte: dataFim },
+            status: 'concluida'
+        };
+
+        if (store && store !== 'all') {
+            whereClause.lojaId = store;
+        } else {
+            whereClause.loja = {
+                ativo: true
+            };
+        }
+
         // 1. Buscar vendas do período atual
         const vendasPeriodo = await prisma.venda.findMany({
-            where: {
-                dataVenda: { gte: dataInicio, lte: dataFim },
-                status: 'concluida'
-            },
+            where: whereClause,
             include: {
                 itens: {
                     include: {
@@ -347,12 +384,23 @@ export const obterVisaoGeralInteligente = async (req, res) => {
             }
         });
 
+        const whereClauseAnterior = {
+            dataVenda: { gte: dataInicioAnterior, lte: dataFimAnterior },
+            status: 'concluida'
+        };
+
+        if (store && store !== 'all') {
+            whereClauseAnterior.lojaId = store;
+        } else {
+            whereClauseAnterior.loja = {
+                ativo: true
+            };
+        }
+
+
         // 2. Buscar vendas do período anterior
         const vendasPeriodoAnterior = await prisma.venda.findMany({
-            where: {
-                dataVenda: { gte: dataInicioAnterior, lte: dataFimAnterior },
-                status: 'concluida'
-            }
+            where: whereClauseAnterior
         });
 
         // 3. Calcular faturamento total
@@ -424,13 +472,23 @@ export const obterVisaoGeralInteligente = async (req, res) => {
     }
 };
 
-async function obterDadosGraficoVendas(inicio, fim) {
+async function obterDadosGraficoVendas(inicio, fim, store) {
+    const whereClause = {
+        dataVenda: { gte: inicio, lte: fim },
+        status: 'concluida'
+    };
+
+    if (store && store !== 'all') {
+        whereClause.lojaId = store;
+    } else {
+        whereClause.loja = {
+            ativo: true
+        };
+    }
+
     const vendas = await prisma.venda.groupBy({
         by: ['dataVenda'],
-        where: {
-            dataVenda: { gte: inicio, lte: fim },
-            status: 'concluida'
-        },
+        where: whereClause,
         _sum: { total: true }
     });
 

@@ -20,15 +20,17 @@ import orcamentoRoutes from './routes/orcamentoRoutes.js';
 import pedidoRoutes from './routes/pedidoRoutes.js';
 import pedidoCompraRoutes from './routes/pedidoCompraRoutes.js';
 import pixRoutes from './routes/pixRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import storeRoutes from './routes/storeRoutes.js';
+import { prisma } from './lib/prisma.js';
 
 dotenv.config();
 
 const app = express();
-import { prisma } from './lib/prisma.js';
 
 // Middlewares de segurança
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: [process.env.FRONTEND_URL || 'http://localhost:5173', 'http://localhost:3000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -56,6 +58,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/orcamentos', orcamentoRoutes);
 app.use('/api/pedidos', pedidoRoutes);
 app.use('/api/pedidos-compra', pedidoCompraRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/stores', storeRoutes);
 app.use('/api', pixRoutes); // Rotas PIX
 
 // Rota de teste

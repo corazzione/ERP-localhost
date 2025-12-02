@@ -22,6 +22,7 @@ model Usuario {
   orcamentos      Orcamento[]
   pedidos         Pedido[]
   custosPedido    CustoPedido[]
+  notifications   Notification[]
 }
 
 // ===== CADASTROS =====
@@ -102,12 +103,29 @@ model ProdutoVariacao {
   produto     Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
 }
 
+// ===== LOJAS =====
+model Loja {
+  id        String   @id @default(uuid())
+  nome      String
+  codigo    String   @unique
+  endereco  String?
+  telefone  String?
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
+  
+  vendas    Venda[]
+  
+  @@index([codigo])
+  @@index([ativo])
+}
+
 // ===== VENDAS =====
 model Venda {
   id              String    @id @default(uuid())
   numero          String    @unique
   clienteId       String?
   usuarioId       String
+  lojaId          String?
   dataVenda       DateTime  @default(now())
   subtotal        Decimal   @db.Decimal(10, 2)
   desconto        Decimal   @default(0) @db.Decimal(10, 2)
@@ -125,6 +143,7 @@ model Venda {
   
   cliente         Cliente?  @relation(fields: [clienteId], references: [id])
   usuario         Usuario   @relation(fields: [usuarioId], references: [id])
+  loja            Loja?     @relation(fields: [lojaId], references: [id])
   itens           ItemVenda[]
   carne           Carne?
   pedidos         Pedido[]
@@ -431,4 +450,20 @@ model PixConfig {
   atualizadoEm    DateTime @updatedAt
 
   @@map("pix_config")
+}
+
+// ===== NOTIFICAÇÕES =====
+model Notification {
+  id        Int      @id @default(autoincrement())
+  title     String
+  message   String
+  type      String   // 'update', 'bug', 'alert', 'info'
+  isGlobal  Boolean  @default(true)
+  userId    String?
+  user      Usuario? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
 }

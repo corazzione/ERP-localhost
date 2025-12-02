@@ -13,12 +13,12 @@ function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [dashboardData, setDashboardData] = useState(null);
     const [error, setError] = useState(null);
-    const { store, period, customDateRange } = useFilters();
+    const { store, period, customDateRange, lastUpdated } = useFilters();
     const { isDark } = useTheme();
 
     useEffect(() => {
         loadDashboardData();
-    }, [store, period, customDateRange]);
+    }, [store, period, customDateRange, lastUpdated]);
 
     const loadDashboardData = async () => {
         try {
@@ -39,54 +39,14 @@ function Dashboard() {
             setDashboardData(response.data);
         } catch (error) {
             console.error('❌ Erro ao carregar dashboard:', error);
-            setError(error.response?.data?.error || 'Erro ao carregar dados');
-
-            // Usar dados de exemplo se houver erro
-            setDashboardData({
-                vendas: {
-                    faturamento: 45890.00,
-                    quantidade: 161,
-                    ticketMedio: 285.00,
-                    comparativo: {
-                        faturamento: 12.5,
-                        quantidade: 15.3,
-                        ticketMedio: 8.2
-                    },
-                    porDia: generateMockDailyData()
-                },
-                financeiro: {
-                    receber30Dias: 12450.00,
-                    pagar30Dias: 8320.00,
-                    comparativo: {
-                        receber: -5.1,
-                        pagar: 3.2
-                    }
-                },
-                movimentacoes: {
-                    entradas: 58900.00,
-                    saidas: 32100.00,
-                    crediario: 18500.00
-                }
-            });
+            setError(error.response?.data?.error || 'Erro ao carregar dados do dashboard');
+            setDashboardData(null);
         } finally {
             setLoading(false);
         }
     };
 
-    // Generate mock data for testing
-    const generateMockDailyData = () => {
-        const data = [];
-        const today = new Date();
-        for (let i = 29; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            data.push({
-                data: date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
-                valor: Math.random() * 3000 + 1000
-            });
-        }
-        return data;
-    };
+
 
     if (loading) {
         return <LoadingSpinner fullScreen />;
@@ -177,14 +137,14 @@ function Dashboard() {
                 marginBottom: '32px'
             }}>
                 <AppleLineChart
-                    data={dashboardData?.vendas?.porDia || generateMockDailyData()}
+                    data={dashboardData?.vendas?.porDia || []}
                     title="Faturamento Diário"
                 />
                 <DonutMovementChart
                     data={dashboardData?.movimentacoes || {
-                        entradas: 58900,
-                        saidas: 32100,
-                        crediario: 18500
+                        entradas: 0,
+                        saidas: 0,
+                        crediario: 0
                     }}
                 />
             </div>
@@ -209,8 +169,7 @@ function Dashboard() {
                     alignItems: 'center',
                     gap: '8px'
                 }}>
-                    <AlertCircle size={18} />
-                    {error} (Exibindo dados de exemplo)
+                    {error}
                 </div>
             )}
         </div>

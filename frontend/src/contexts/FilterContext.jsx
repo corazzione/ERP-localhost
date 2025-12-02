@@ -6,6 +6,7 @@ export function FilterProvider({ children }) {
     const [store, setStore] = useState('all');
     const [period, setPeriod] = useState('month');
     const [customDateRange, setCustomDateRange] = useState({ start: null, end: null });
+    const [lastUpdated, setLastUpdated] = useState(Date.now());
 
     const value = {
         store,
@@ -13,7 +14,9 @@ export function FilterProvider({ children }) {
         period,
         setPeriod,
         customDateRange,
-        setCustomDateRange
+        setCustomDateRange,
+        lastUpdated,
+        refreshDashboard: () => setLastUpdated(Date.now())
     };
 
     return (

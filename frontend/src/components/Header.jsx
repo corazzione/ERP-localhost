@@ -1,18 +1,61 @@
-import { useState } from 'react';
-import { Search, Bell, Sun, Moon, Store, Calendar, ChevronDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Bell, Sun, Moon, Calendar, ChevronDown } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFilters } from '../contexts/FilterContext';
 import { useLocation } from 'react-router-dom';
+import NotificationDropdown from './NotificationDropdown';
+import CreateStoreModal from './CreateStoreModal';
+import ManageStoresModal from './ManageStoresModal';
+import StoreDropdown from './StoreDropdown';
+import api from '../services/api';
 
 function Header() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showCreateStoreModal, setShowCreateStoreModal] = useState(false);
+    const [showManageStoresModal, setShowManageStoresModal] = useState(false);
+    const [stores, setStores] = useState([]);
     const { isDark, toggleTheme } = useTheme();
-    const { store, setStore, period, setPeriod, customDateRange, setCustomDateRange } = useFilters();
+    const { store, setStore, period, setPeriod, customDateRange, setCustomDateRange, refreshDashboard } = useFilters();
     const location = useLocation();
+
+    useEffect(() => {
+        fetchStores();
+    }, []);
+
+    const fetchStores = async () => {
+        try {
+            const response = await api.get('/stores');
+            const activeStores = response.data;
+            setStores(activeStores);
+
+            // Se a loja selecionada não existir mais (foi excluída), voltar para 'all'
+            if (store !== 'all' && !activeStores.find(s => s.id === store)) {
+                setStore('all');
+            }
+
+            refreshDashboard(); // Force dashboard refresh when stores change
+        } catch (error) {
+            console.error('Erro ao buscar lojas:', error);
+        }
+    };
+
+    const handleStoreChange = (e) => {
+        const value = e.target.value;
+        if (value === 'new') {
+            setShowCreateStoreModal(true);
+        } else {
+            setStore(value);
+        }
+    };
+
+    const handleStoreCreated = (newStore) => {
+        fetchStores();
+        setStore(newStore.id.toString());
+    };
 
     // Pages that show period filter - including '/' for homepage (dashboard)
     const pagesWithPeriodFilter = ['/', '/dashboard', '/orcamentos', '/painel-geral', '/crediario'];
@@ -40,6 +83,22 @@ function Header() {
 
     return (
         <>
+            {/* Create Store Modal */}
+            {showCreateStoreModal && (
+                <CreateStoreModal
+                    onClose={() => setShowCreateStoreModal(false)}
+                    onSuccess={handleStoreCreated}
+                />
+            )}
+
+
+            {showManageStoresModal && (
+                <ManageStoresModal
+                    onClose={() => setShowManageStoresModal(false)}
+                    onUpdate={fetchStores}
+                />
+            )}
+
             {/* Custom Date Picker Modal */}
             {showDatePicker && (
                 <div style={{
@@ -226,71 +285,14 @@ function Header() {
                 {/* Filter Section */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '1rem' }}>
                     {/* Store Filter - Always visible */}
-                    <div style={{ position: 'relative' }}>
-                        <Store
-                            size={16}
-                            style={{
-                                position: 'absolute',
-                                left: '10px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                color: '#8b5cf6',
-                                pointerEvents: 'none',
-                                zIndex: 1
-                            }}
-                        />
-                        <select
-                            value={store}
-                            onChange={(e) => setStore(e.target.value)}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = '#8b5cf6';
-                                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = borderColor;
-                                e.currentTarget.style.boxShadow = 'none';
-                            }}
-                            onFocus={(e) => {
-                                e.currentTarget.style.borderColor = '#8b5cf6';
-                                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.15)';
-                            }}
-                            onBlur={(e) => {
-                                e.currentTarget.style.borderColor = borderColor;
-                                e.currentTarget.style.boxShadow = 'none';
-                            }}
-                            style={{
-                                appearance: 'none',
-                                padding: '10px 34px 10px 34px',
-                                fontSize: '13px',
-                                fontWeight: '500',
-                                border: `1px solid ${borderColor}`,
-                                borderRadius: '8px',
-                                backgroundColor: headerBg,
-                                color: textColor,
-                                cursor: 'pointer',
-                                outline: 'none',
-                                minWidth: '130px',
-                                transition: 'all 0.2s ease',
-                                boxShadow: isDark ? '0 1px 2px rgba(0,0,0,0.3)' : '0 1px 2px rgba(0,0,0,0.05)',
-                                height: '40px'
-                            }}
-                        >
-                            <option value="all">Todas</option>
-                            <option value="1">Loja Principal</option>
-                            <option value="2" disabled>Filial 1</option>
-                        </select>
-                        <ChevronDown
-                            size={14}
-                            style={{
-                                position: 'absolute',
-                                right: '10px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                pointerEvents: 'none',
-                                color: '#8b5cf6'
-                            }}
-                        />
-                    </div>
+
+                    <StoreDropdown
+                        stores={stores}
+                        selectedStore={store}
+                        onChange={setStore}
+                        onNewStore={() => setShowCreateStoreModal(true)}
+                        onManage={() => setShowManageStoresModal(true)}
+                    />
 
                     {/* Period Filter - Conditional */}
                     {showPeriodFilter && (
@@ -389,35 +391,7 @@ function Header() {
                     </button>
 
                     {/* Notifications */}
-                    <button
-                        style={{
-                            position: 'relative',
-                            background: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '8px',
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'background 0.2s',
-                            color: textColor
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isDark ? '#334155' : '#f3f4f6'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                        <Bell size={20} />
-                        <span style={{
-                            position: 'absolute',
-                            top: '6px',
-                            right: '6px',
-                            width: '8px',
-                            height: '8px',
-                            backgroundColor: '#ef4444',
-                            borderRadius: '50%',
-                            border: `2px solid ${headerBg}`
-                        }}></span>
-                    </button>
+                    <NotificationDropdown />
 
                     {/* User Profile */}
                     <div style={{ position: 'relative' }}>
