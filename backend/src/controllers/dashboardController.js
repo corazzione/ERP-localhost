@@ -279,6 +279,151 @@ export const obterDadosDashboard = async (req, res) => {
     }
 };
 
+export const obterVisaoGeralInteligente = async (req, res) => {
+    try {
+        const { period = 'month', store = 'all' } = req.query;
+
+        const hoje = new Date();
+        let dataInicio, dataFim;
+
+        // Calcular período de 30 dias
+        switch (period) {
+            case 'today':
+                dataFim = new Date(hoje.setHours(23, 59, 59, 999));
+                dataInicio = new Date(dataFim);
+                dataInicio.setDate(dataFim.getDate() - 29);
+                dataInicio.setHours(0, 0, 0, 0);
+                break;
+            case 'week':
+                dataFim = new Date(hoje);
+                dataFim.setDate(hoje.getDate() - hoje.getDay() + 6);
+                dataFim.setHours(23, 59, 59, 999);
+                dataInicio = new Date(dataFim);
+                dataInicio.setDate(dataFim.getDate() - 29);
+                dataInicio.setHours(0, 0, 0, 0);
+                break;
+            case 'month':
+                dataFim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+                dataFim.setHours(23, 59, 59, 999);
+                dataInicio = new Date(dataFim);
+                dataInicio.setDate(dataFim.getDate() - 29);
+                dataInicio.setHours(0, 0, 0, 0);
+                break;
+            case 'year':
+                dataFim = new Date(hoje.getFullYear(), 11, 31);
+                dataFim.setHours(23, 59, 59, 999);
+                dataInicio = new Date(dataFim);
+                dataInicio.setDate(dataFim.getDate() - 29);
+                dataInicio.setHours(0, 0, 0, 0);
+                break;
+            default:
+                dataFim = new Date(hoje);
+                dataFim.setHours(23, 59, 59, 999);
+                dataInicio = new Date(dataFim);
+                dataInicio.setDate(dataFim.getDate() - 29);
+                dataInicio.setHours(0, 0, 0, 0);
+        }
+
+        // Período anterior (30 dias antes)
+        const duracao = dataFim - dataInicio;
+        const dataInicioAnterior = new Date(dataInicio.getTime() - duracao - 86400000); // -1 dia extra
+        const dataFimAnterior = new Date(dataInicio.getTime() - 1);
+
+        // 1. Buscar vendas do período atual
+        const vendasPeriodo = await prisma.venda.findMany({
+            where: {
+                dataVenda: { gte: dataInicio, lte: dataFim },
+                status: 'concluida'
+            },
+            include: {
+                itens: {
+                    include: {
+                        produto: true
+                    }
+                }
+            },
+            orderBy: {
+                dataVenda: 'desc'
+            }
+        });
+
+        // 2. Buscar vendas do período anterior
+        const vendasPeriodoAnterior = await prisma.venda.findMany({
+            where: {
+                dataVenda: { gte: dataInicioAnterior, lte: dataFimAnterior },
+                status: 'concluida'
+            }
+        });
+
+        // 3. Calcular faturamento total
+        const faturamentoPeriodo = vendasPeriodo.reduce((sum, v) => sum + parseFloat(v.total), 0);
+        const faturamentoPeriodoAnterior = vendasPeriodoAnterior.reduce((sum, v) => sum + parseFloat(v.total), 0);
+
+        // 4. Calcular tendência
+        const calcularPercentual = (atual, anterior) => {
+            if (anterior === 0) return atual > 0 ? 100 : 0;
+            return ((atual - anterior) / anterior) * 100;
+        };
+        const tendencia = calcularPercentual(faturamentoPeriodo, faturamentoPeriodoAnterior);
+
+        // 5. Gerar heatmap de 30 dias
+        const vendasPorDia = {};
+        vendasPeriodo.forEach(v => {
+            const dia = v.dataVenda.toISOString().split('T')[0];
+            vendasPorDia[dia] = (vendasPorDia[dia] || 0) + parseFloat(v.total);
+        });
+
+        const heatmapData = [];
+        const current = new Date(dataInicio);
+        while (current <= dataFim) {
+            const dia = current.toISOString().split('T')[0];
+            heatmapData.push({
+                data: dia,
+                faturamento: vendasPorDia[dia] || 0
+            });
+            current.setDate(current.getDate() + 1);
+        }
+
+        // 6. Encontrar produto mais vendido
+        const produtosVendidos = {};
+        vendasPeriodo.forEach(venda => {
+            venda.itens.forEach(item => {
+                const produtoId = item.produtoId;
+                const produtoNome = item.produto?.nome || 'Produto';
+                const valorTotal = parseFloat(item.precoUnitario) * item.quantidade;
+
+                if (!produtosVendidos[produtoId]) {
+                    produtosVendidos[produtoId] = {
+                        nome: produtoNome,
+                        valorTotal: 0
+                    };
+                }
+                produtosVendidos[produtoId].valorTotal += valorTotal;
+            });
+        });
+
+        const topProduto = Object.values(produtosVendidos).length > 0
+            ? Object.values(produtosVendidos).reduce((max, p) => p.valorTotal > max.valorTotal ? p : max)
+            : { nome: 'Nenhum produto', valorTotal: 0 };
+
+        // 7. Encontrar dia mais forte
+        const diaMaisForte = heatmapData.length > 0
+            ? heatmapData.reduce((max, d) => d.faturamento > max.faturamento ? d : max)
+            : { data: new Date().toISOString().split('T')[0], faturamento: 0 };
+
+        res.json({
+            periodo: { inicio: dataInicio, fim: dataFim },
+            heatmapData,
+            topProduto,
+            diaMaisForte,
+            tendencia
+        });
+    } catch (error) {
+        console.error('Erro ao obter visão geral inteligente:', error);
+        res.status(500).json({ error: 'Erro ao obter visão geral inteligente' });
+    }
+};
+
 async function obterDadosGraficoVendas(inicio, fim) {
     const vendas = await prisma.venda.groupBy({
         by: ['dataVenda'],
@@ -312,3 +457,4 @@ async function obterDadosGraficoVendas(inicio, fim) {
 
     return dadosGrafico;
 }
+

@@ -5,6 +5,7 @@ import { useFilters } from '../contexts/FilterContext';
 import PremiumKPICard from '../components/PremiumKPICard';
 import AppleLineChart from '../components/AppleLineChart';
 import DonutMovementChart from '../components/DonutMovementChart';
+import IntelligentOverviewCard from '../components/IntelligentOverviewCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -186,6 +187,11 @@ function Dashboard() {
                         crediario: 18500
                     }}
                 />
+            </div>
+
+            {/* Intelligent Overview Card */}
+            <div style={{ marginBottom: '32px' }}>
+                <IntelligentOverviewCard />
             </div>
 
             {/* Error Display */}
