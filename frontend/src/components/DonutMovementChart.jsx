@@ -681,25 +681,43 @@ function DonutMovementChart({ data }) {
                 }}>
                     {/* Donut */}
                     <ResponsiveContainer width="100%" height={200}>
-                        <PieChart style={{ overflow: 'visible' }} wrapperStyle={{ overflow: 'visible' }}>
+                        <PieChart
+                            style={{
+                                overflow: 'visible',
+                                filter: isDark ? 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.15))' : 'none'
+                            }}
+                            wrapperStyle={{ overflow: 'visible' }}
+                        >
+                            <defs>
+                                <filter id="donutGlow">
+                                    <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                                    <feMerge>
+                                        <feMergeNode in="coloredBlur" />
+                                        <feMergeNode in="SourceGraphic" />
+                                    </feMerge>
+                                </filter>
+                            </defs>
                             <Pie
                                 data={filteredData}
                                 cx="50%"
                                 cy="50%"
-                                innerRadius="68%"
-                                outerRadius="88%"
-                                paddingAngle={2}
+                                innerRadius="72%"
+                                outerRadius="90%"
+                                paddingAngle={1.5}
                                 dataKey="value"
                                 startAngle={90}
                                 endAngle={450}
+                                stroke={isDark ? cardBg : '#ffffff'}
+                                strokeWidth={0}
                             >
                                 {filteredData.map((entry, index) => (
                                     <Cell
                                         key={`cell-${index}`}
                                         fill={entry.color}
                                         style={{
-                                            filter: 'brightness(1.1)',
-                                            transition: 'all 0.3s ease'
+                                            filter: isDark ? 'brightness(1.15) saturate(1.1)' : 'brightness(1.05)',
+                                            transition: 'all 0.3s ease',
+                                            shapeRendering: 'geometricPrecision'
                                         }}
                                     />
                                 ))}
