@@ -307,165 +307,286 @@ export const obterDadosDashboard = async (req, res) => {
 
 export const obterVisaoGeralInteligente = async (req, res) => {
     try {
-        const { period = 'month', store = 'all' } = req.query;
+        const {
+            period = 'month',
+            store = 'all',
+            tab = 'todas',
+            type,
+            paymentMethod,
+            category,
+            origin,
+            destination,
+            status,
+            sort
+        } = req.query;
 
         const hoje = new Date();
         let dataInicio, dataFim;
 
-        // Calcular período de 30 dias
+        // Calcular período
         switch (period) {
             case 'today':
+                dataInicio = new Date(hoje.setHours(0, 0, 0, 0));
                 dataFim = new Date(hoje.setHours(23, 59, 59, 999));
-                dataInicio = new Date(dataFim);
-                dataInicio.setDate(dataFim.getDate() - 29);
-                dataInicio.setHours(0, 0, 0, 0);
                 break;
             case 'week':
-                dataFim = new Date(hoje);
-                dataFim.setDate(hoje.getDate() - hoje.getDay() + 6);
-                dataFim.setHours(23, 59, 59, 999);
-                dataInicio = new Date(dataFim);
-                dataInicio.setDate(dataFim.getDate() - 29);
+                dataInicio = new Date(hoje);
+                dataInicio.setDate(hoje.getDate() - hoje.getDay());
                 dataInicio.setHours(0, 0, 0, 0);
+                dataFim = new Date(dataInicio);
+                dataFim.setDate(dataInicio.getDate() + 6);
+                dataFim.setHours(23, 59, 59, 999);
                 break;
             case 'month':
+                dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
                 dataFim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
                 dataFim.setHours(23, 59, 59, 999);
-                dataInicio = new Date(dataFim);
-                dataInicio.setDate(dataFim.getDate() - 29);
-                dataInicio.setHours(0, 0, 0, 0);
                 break;
             case 'year':
+                dataInicio = new Date(hoje.getFullYear(), 0, 1);
                 dataFim = new Date(hoje.getFullYear(), 11, 31);
                 dataFim.setHours(23, 59, 59, 999);
-                dataInicio = new Date(dataFim);
-                dataInicio.setDate(dataFim.getDate() - 29);
-                dataInicio.setHours(0, 0, 0, 0);
+                break;
+            case 'custom':
+                if (req.query.startDate && req.query.endDate) {
+                    dataInicio = new Date(req.query.startDate);
+                    dataFim = new Date(req.query.endDate);
+                } else {
+                    dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                    dataFim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+                }
                 break;
             default:
-                dataFim = new Date(hoje);
-                dataFim.setHours(23, 59, 59, 999);
-                dataInicio = new Date(dataFim);
-                dataInicio.setDate(dataFim.getDate() - 29);
-                dataInicio.setHours(0, 0, 0, 0);
+                dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                dataFim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
         }
 
-        // Período anterior (30 dias antes)
-        const duracao = dataFim - dataInicio;
-        const dataInicioAnterior = new Date(dataInicio.getTime() - duracao - 86400000); // -1 dia extra
-        const dataFimAnterior = new Date(dataInicio.getTime() - 1);
-
-        // Filtro de loja
-        const whereClause = {
-            dataVenda: { gte: dataInicio, lte: dataFim },
-            status: 'concluida'
-        };
-
+        // Filtro de loja base
+        const storeFilter = {};
         if (store && store !== 'all') {
-            whereClause.lojaId = store;
+            storeFilter.lojaId = store;
         } else {
-            whereClause.loja = {
-                ativo: true
-            };
+            storeFilter.loja = { ativo: true };
         }
 
-        // 1. Buscar vendas do período atual
-        const vendasPeriodo = await prisma.venda.findMany({
-            where: whereClause,
-            include: {
-                itens: {
-                    include: {
-                        produto: true
-                    }
-                }
-            },
-            orderBy: {
-                dataVenda: 'desc'
-            }
-        });
-
-        const whereClauseAnterior = {
-            dataVenda: { gte: dataInicioAnterior, lte: dataFimAnterior },
-            status: 'concluida'
-        };
-
-        if (store && store !== 'all') {
-            whereClauseAnterior.lojaId = store;
-        } else {
-            whereClauseAnterior.loja = {
-                ativo: true
-            };
-        }
-
-
-        // 2. Buscar vendas do período anterior
-        const vendasPeriodoAnterior = await prisma.venda.findMany({
-            where: whereClauseAnterior
-        });
-
-        // 3. Calcular faturamento total
-        const faturamentoPeriodo = vendasPeriodo.reduce((sum, v) => sum + parseFloat(v.total), 0);
-        const faturamentoPeriodoAnterior = vendasPeriodoAnterior.reduce((sum, v) => sum + parseFloat(v.total), 0);
-
-        // 4. Calcular tendência
-        const calcularPercentual = (atual, anterior) => {
-            if (anterior === 0) return atual > 0 ? 100 : 0;
-            return ((atual - anterior) / anterior) * 100;
-        };
-        const tendencia = calcularPercentual(faturamentoPeriodo, faturamentoPeriodoAnterior);
-
-        // 5. Gerar heatmap de 30 dias
-        const vendasPorDia = {};
-        vendasPeriodo.forEach(v => {
-            const dia = v.dataVenda.toISOString().split('T')[0];
-            vendasPorDia[dia] = (vendasPorDia[dia] || 0) + parseFloat(v.total);
-        });
-
-        const heatmapData = [];
-        const current = new Date(dataInicio);
-        while (current <= dataFim) {
-            const dia = current.toISOString().split('T')[0];
-            heatmapData.push({
-                data: dia,
-                faturamento: vendasPorDia[dia] || 0
-            });
-            current.setDate(current.getDate() + 1);
-        }
-
-        // 6. Encontrar produto mais vendido
-        const produtosVendidos = {};
-        vendasPeriodo.forEach(venda => {
-            venda.itens.forEach(item => {
-                const produtoId = item.produtoId;
-                const produtoNome = item.produto?.nome || 'Produto';
-                const valorTotal = parseFloat(item.precoUnitario) * item.quantidade;
-
-                if (!produtosVendidos[produtoId]) {
-                    produtosVendidos[produtoId] = {
-                        nome: produtoNome,
-                        valorTotal: 0
-                    };
-                }
-                produtosVendidos[produtoId].valorTotal += valorTotal;
-            });
-        });
-
-        const topProduto = Object.values(produtosVendidos).length > 0
-            ? Object.values(produtosVendidos).reduce((max, p) => p.valorTotal > max.valorTotal ? p : max)
-            : { nome: 'Nenhum produto', valorTotal: 0 };
-
-        // 7. Encontrar dia mais forte
-        const diaMaisForte = heatmapData.length > 0
-            ? heatmapData.reduce((max, d) => d.faturamento > max.faturamento ? d : max)
-            : { data: new Date().toISOString().split('T')[0], faturamento: 0 };
-
-        res.json({
+        let responseData = {
             periodo: { inicio: dataInicio, fim: dataFim },
-            heatmapData,
-            topProduto,
-            diaMaisForte,
-            tendencia
-        });
+            tab
+        };
+
+        // Lógica específica por aba
+        if (tab === 'todas') {
+            // === ABA TODAS ===
+
+            // 1. Vendas (Entradas)
+            const whereVendas = {
+                dataVenda: { gte: dataInicio, lte: dataFim },
+                status: 'concluida',
+                ...storeFilter
+            };
+
+            if (paymentMethod && paymentMethod !== 'Todos') {
+                whereVendas.formaPagamento = paymentMethod.toLowerCase().replace('cartão', 'cartao').replace(' ', '_');
+            }
+
+            const vendas = await prisma.venda.findMany({
+                where: whereVendas,
+                include: { itens: { include: { produto: true } } }
+            });
+
+            // 2. Contas a Pagar (Saídas)
+            // Nota: ContaPagar não tem lojaId direto, assumindo global ou filtrando se tiver relação futura
+            const whereSaidas = {
+                dataVencimento: { gte: dataInicio, lte: dataFim },
+                status: 'pago' // Apenas pagas contam como saída efetiva para fluxo de caixa
+            };
+
+            const saidas = await prisma.contaPagar.findMany({
+                where: whereSaidas
+            });
+
+            // Cálculos
+            const totalEntradas = vendas.reduce((sum, v) => sum + parseFloat(v.total), 0);
+            const totalSaidas = saidas.reduce((sum, s) => sum + parseFloat(s.valor), 0);
+            const lucroSimples = totalEntradas - totalSaidas;
+
+            // Heatmap (baseado em vendas)
+            const vendasPorDia = {};
+            vendas.forEach(v => {
+                const dia = v.dataVenda.toISOString().split('T')[0];
+                vendasPorDia[dia] = (vendasPorDia[dia] || 0) + parseFloat(v.total);
+            });
+
+            const heatmapData = [];
+            const current = new Date(dataInicio);
+            while (current <= dataFim) {
+                const dia = current.toISOString().split('T')[0];
+                heatmapData.push({
+                    data: dia,
+                    faturamento: vendasPorDia[dia] || 0
+                });
+                current.setDate(current.getDate() + 1);
+            }
+
+            // Top Produto e Dia Mais Forte
+            const produtosVendidos = {};
+            vendas.forEach(v => {
+                v.itens.forEach(item => {
+                    const pid = item.produtoId || 'unknown';
+                    if (!produtosVendidos[pid]) produtosVendidos[pid] = { nome: item.produto?.nome || 'Produto', valor: 0 };
+                    produtosVendidos[pid].valor += parseFloat(item.precoUnit) * item.quantidade;
+                });
+            });
+
+            const topProduto = Object.values(produtosVendidos).sort((a, b) => b.valor - a.valor)[0] || { nome: 'N/A', valor: 0 };
+            const diaMaisForte = heatmapData.sort((a, b) => b.faturamento - a.faturamento)[0] || { data: null, faturamento: 0 };
+
+            // Tendência (comparado com período anterior)
+            const duracao = dataFim - dataInicio;
+            const inicioAnt = new Date(dataInicio.getTime() - duracao);
+            const fimAnt = new Date(dataInicio.getTime() - 1);
+
+            const vendasAnt = await prisma.venda.aggregate({
+                _sum: { total: true },
+                where: {
+                    dataVenda: { gte: inicioAnt, lte: fimAnt },
+                    status: 'concluida',
+                    ...storeFilter
+                }
+            });
+            const totalAnt = parseFloat(vendasAnt._sum.total || 0);
+            const tendencia = totalAnt === 0 ? (totalEntradas > 0 ? 100 : 0) : ((totalEntradas - totalAnt) / totalAnt) * 100;
+
+            responseData = {
+                ...responseData,
+                heatmapData,
+                topProduto: { nome: topProduto.nome, valorTotal: topProduto.valor },
+                diaMaisForte,
+                tendencia,
+                resumoFinanceiro: {
+                    totalMovimentado: totalEntradas + totalSaidas,
+                    lucroSimples,
+                    totalEntradas,
+                    totalSaidas
+                }
+            };
+
+        } else if (tab === 'entradas') {
+            // === ABA ENTRADAS ===
+            const where = {
+                dataVenda: { gte: dataInicio, lte: dataFim },
+                status: 'concluida',
+                ...storeFilter
+            };
+
+            if (paymentMethod) where.formaPagamento = paymentMethod;
+            // Categoria e Origem seriam filtros extras se tivéssemos campos específicos
+
+            const vendas = await prisma.venda.findMany({
+                where,
+                orderBy: { total: 'desc' },
+                take: origin === 'top3' ? 3 : (origin === 'top5' ? 5 : 10),
+                include: { cliente: { select: { nome: true } } }
+            });
+
+            const totalRecebido = await prisma.venda.aggregate({
+                _sum: { total: true },
+                where
+            });
+
+            responseData.entradas = {
+                total: parseFloat(totalRecebido._sum.total || 0),
+                lista: vendas.map(v => ({
+                    id: v.id,
+                    descricao: `Venda #${v.numero}`,
+                    valor: parseFloat(v.total),
+                    data: v.dataVenda,
+                    tipo: 'Venda',
+                    origem: v.lojaId ? 'Loja' : 'Online'
+                }))
+            };
+
+        } else if (tab === 'saidas') {
+            // === ABA SAÍDAS ===
+            const where = {
+                dataVencimento: { gte: dataInicio, lte: dataFim },
+                // status: 'pago' // Opcional: mostrar todas ou só pagas? O usuário pediu "Saídas", geralmente implica pago ou a pagar. Vamos mostrar todas do período.
+            };
+
+            if (category) where.categoria = { nome: category };
+            if (destination) where.fornecedor = { nome: { contains: destination, mode: 'insensitive' } };
+
+            const contas = await prisma.contaPagar.findMany({
+                where,
+                include: { categoria: true, fornecedor: true },
+                orderBy: sort === 'maior_valor' ? { valor: 'desc' } : { dataVencimento: 'desc' },
+                take: 10
+            });
+
+            const totalSaidas = await prisma.contaPagar.aggregate({
+                _sum: { valor: true },
+                where
+            });
+
+            responseData.saidas = {
+                total: parseFloat(totalSaidas._sum.valor || 0),
+                lista: contas.map(c => ({
+                    id: c.id,
+                    descricao: c.descricao,
+                    valor: parseFloat(c.valor),
+                    data: c.dataVencimento,
+                    categoria: c.categoria?.nome || 'Geral',
+                    destino: c.fornecedor?.nome || 'Outros'
+                }))
+            };
+
+        } else if (tab === 'crediario') {
+            // === ABA CREDIÁRIO ===
+            const where = {
+                OR: [
+                    { dataVencimento: { gte: dataInicio, lte: dataFim } }, // Vencem no período
+                    { dataPagamento: { gte: dataInicio, lte: dataFim } }   // Pagas no período
+                ]
+            };
+
+            if (status === 'pagas') where.status = 'pago';
+            if (status === 'atrasadas') {
+                where.status = 'pendente';
+                where.dataVencimento = { lt: new Date() };
+            }
+            if (status === 'em_aberto') where.status = 'pendente';
+
+            const parcelas = await prisma.parcela.findMany({
+                where,
+                include: { carne: { include: { cliente: true } } },
+                orderBy: { dataVencimento: 'asc' },
+                take: 20
+            });
+
+            const totalRecebido = parcelas
+                .filter(p => p.status === 'pago')
+                .reduce((sum, p) => sum + parseFloat(p.valorPago), 0);
+
+            const totalPendente = parcelas
+                .filter(p => p.status === 'pendente')
+                .reduce((sum, p) => sum + parseFloat(p.valorParcela), 0);
+
+            responseData.crediario = {
+                recebido: totalRecebido,
+                pendente: totalPendente,
+                lista: parcelas.map(p => ({
+                    id: p.id,
+                    cliente: p.carne?.cliente?.nome || 'Cliente',
+                    valor: parseFloat(p.valorParcela),
+                    vencimento: p.dataVencimento,
+                    status: p.status,
+                    parcela: `${p.numeroParcela}/${p.carne?.numParcelas}`
+                }))
+            };
+        }
+
+        res.json(responseData);
+
     } catch (error) {
         console.error('Erro ao obter visão geral inteligente:', error);
         res.status(500).json({ error: 'Erro ao obter visão geral inteligente' });
