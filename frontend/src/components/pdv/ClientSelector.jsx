@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, UserPlus } from 'lucide-react';
+import { Search, UserPlus, Phone, FileText } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 /**
@@ -64,7 +64,7 @@ function ClientSelector({ clientes, onSelect, onNewClient }) {
                 <input
                     ref={inputRef}
                     type="text"
-                    placeholder="👤 Buscar cliente por nome, CPF ou telefone..."
+                    placeholder="Buscar cliente por nome, CPF ou telefone..."
                     value={searchTerm}
                     onChange={(e) => {
                         setSearchTerm(e.target.value);
@@ -220,8 +220,18 @@ function ClientSelector({ clientes, onSelect, onNewClient }) {
                                         display: 'flex',
                                         gap: '12px'
                                     }}>
-                                        {cliente.telefone && <span>📱 {cliente.telefone}</span>}
-                                        {cliente.cpf && <span>📄 {cliente.cpf}</span>}
+                                        {cliente.telefone && (
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <Phone size={12} />
+                                                {cliente.telefone}
+                                            </span>
+                                        )}
+                                        {cliente.cpf && (
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <FileText size={12} />
+                                                {cliente.cpf}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>

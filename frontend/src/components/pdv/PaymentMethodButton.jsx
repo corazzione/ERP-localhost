@@ -46,6 +46,7 @@ function PaymentMethodButton({
                 transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
                 minWidth: '90px'
             }}
+            data-testid={`payment-method-${id}`}
             onMouseEnter={(e) => {
                 if (!isActive) {
                     e.currentTarget.style.borderColor = color;

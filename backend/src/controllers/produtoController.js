@@ -62,7 +62,7 @@ export const buscarProduto = async (req, res) => {
 
 export const criarProduto = async (req, res) => {
     try {
-        const { codigo, nome, descricao, categoria, unidade, precoVenda, precoCusto, estoqueAtual, estoqueMinimo } = req.body;
+        const { codigo, nome, descricao, categoria, unidade, precoVenda, precoCusto, estoqueAtual, estoqueMinimo, lojaId } = req.body;
 
         const produtoExiste = await prisma.produto.findUnique({
             where: { codigo }
@@ -86,7 +86,8 @@ export const criarProduto = async (req, res) => {
                 precoVenda,
                 precoCusto: precoCusto || 0,
                 estoqueAtual: estoqueAtual || 0,
-                estoqueMinimo: estoqueMinimo || 0
+                estoqueMinimo: estoqueMinimo || 0,
+                lojaId: lojaId || null // Add lojaId
             }
         });
 

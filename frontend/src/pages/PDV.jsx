@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    ShoppingCart, LogOut, Search, ShoppingBag, CreditCard, FileText, Trash2
+    ShoppingCart, LogOut, Search, ShoppingBag, CreditCard, FileText, Trash2, Store
 } from 'lucide-react';
 import api from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
+import { useFilters } from '../contexts/FilterContext';
 import { useToast } from '../components/Toast';
 import { playSound } from '../utils/sounds';
 import printReceipt from '../utils/printReceipt';
@@ -16,10 +17,12 @@ import CartItemCard from '../components/pdv/CartItemCard';
 import ClientSelector from '../components/pdv/ClientSelector';
 import ClientBadge from '../components/pdv/ClientBadge';
 import ConfirmModal from '../components/ConfirmModal';
+import StoreDropdown from '../components/StoreDropdown';
 
 function PDV() {
     const navigate = useNavigate();
     const { isDark } = useTheme();
+    const { store, setStore, stores } = useFilters(); // Get stores from context
     const { showToast } = useToast();
 
     // Estados
@@ -43,11 +46,11 @@ function PDV() {
     const textSecondary = isDark ? '#94a3b8' : '#6b7280';
     const borderColor = isDark ? '#334155' : '#e5e7eb';
 
-    // Carregar dados ao iniciar
+    // Carregar dados ao iniciar e quando a loja mudar
     useEffect(() => {
         carregarProdutos();
         carregarClientes();
-    }, []);
+    }, [store]);
 
     // Atalhos de teclado
     useEffect(() => {
@@ -58,7 +61,7 @@ function PDV() {
             }
             if (e.key === 'F3' && carrinho.length > 0) {
                 e.preventDefault();
-                setShowPagamento(true);
+                handleOpenPayment();
             }
             if (e.key === 'F4' && carrinho.length > 0) {
                 e.preventDefault();
@@ -83,7 +86,7 @@ function PDV() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [carrinho, showPagamento]);
+    }, [carrinho, showPagamento, store]);
 
     const carregarProdutos = async () => {
         try {
@@ -106,13 +109,22 @@ function PDV() {
 
     const handleBarcodeScan = async (barcode) => {
         try {
-            const produto = produtos.find(p => p.codigo === barcode);
+            // Filter by store if selected
+            const produto = produtos.find(p =>
+                p.codigo === barcode &&
+                (store === 'all' || !p.lojaId || p.lojaId === store)
+            );
+
             if (produto) {
                 adicionarAoCarrinho(produto);
                 playSound('beep');
             } else {
                 playSound('error');
-                showToast(`Produto não encontrado: ${barcode}`, 'error');
+                if (store !== 'all' && produtos.find(p => p.codigo === barcode)) {
+                    showToast(`Produto pertence a outra loja`, 'error');
+                } else {
+                    showToast(`Produto não encontrado: ${barcode}`, 'error');
+                }
             }
         } catch (error) {
             console.error('Erro ao buscar produto:', error);
@@ -120,7 +132,21 @@ function PDV() {
         }
     };
 
+    const handleOpenPayment = () => {
+        if (store === 'all') {
+            showToast('Selecione uma loja antes de finalizar a venda', 'error');
+            playSound('error');
+            return;
+        }
+        setShowPagamento(true);
+    };
+
     const handlePaymentConfirm = async (paymentData) => {
+        if (store === 'all') {
+            showToast('Selecione uma loja antes de finalizar a venda', 'error');
+            return;
+        }
+
         setLoading(true);
         setShowPagamento(false);
         try {
@@ -129,6 +155,7 @@ function PDV() {
 
             const vendaData = {
                 clienteId: clienteSelecionado?.id || null,
+                lojaId: store,
                 itens: carrinho.map(item => ({
                     produtoId: item.id,
                     quantidade: item.quantidade,
@@ -188,6 +215,12 @@ function PDV() {
             return;
         }
 
+        if (store === 'all') {
+            showToast('Selecione uma loja antes de criar o orçamento', 'error');
+            playSound('error');
+            return;
+        }
+
         setLoading(true);
         try {
             const subtotal = calcularSubtotal();
@@ -195,8 +228,10 @@ function PDV() {
 
             const orcamentoData = {
                 clienteId: clienteSelecionado?.id || null,
+                lojaId: store,
                 itens: carrinho.map(item => ({
                     produtoId: item.id,
+                    descricao: item.nome, // Added descricao for Orcamento
                     quantidade: item.quantidade,
                     precoUnit: parseFloat(item.precoVenda),
                     desconto: item.desconto || 0,
@@ -212,13 +247,13 @@ function PDV() {
             const response = await api.post('/orcamentos', orcamentoData);
 
             playSound('success');
-            showToast(`Orçamento #${response.data.numero} salvo com sucesso!`, 'success');
+            showToast(`✅ Orçamento #${response.data.numero} criado com sucesso!`, 'success');
             limparVenda();
 
             // Aguardar um pouco antes de navegar para o usuário ver o toast
             setTimeout(() => {
                 navigate('/orcamentos');
-            }, 1000);
+            }, 1500);
         } catch (error) {
             console.error('Erro ao salvar orçamento:', error);
             showToast(error.response?.data?.error || 'Erro ao salvar orçamento', 'error');
@@ -291,10 +326,19 @@ function PDV() {
         setAcrescimo(0);
     };
 
+    // Debug logs
+    console.log('Current Store:', store);
+    console.log('Total Products:', produtos.length);
+    if (produtos.length > 0) {
+        console.log('Sample Product Store ID:', produtos[0].lojaId);
+    }
+
     const produtosFiltrados = produtos.filter(p =>
-        p.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        p.codigo.toLowerCase().includes(busca.toLowerCase())
+        (p.nome.toLowerCase().includes(busca.toLowerCase()) ||
+            p.codigo.toLowerCase().includes(busca.toLowerCase())) &&
+        (store === 'all' || !p.lojaId || p.lojaId === store) // Filter by store (include global products)
     );
+    console.log('Filtered Products:', produtosFiltrados.length);
 
     return (
         <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', backgroundColor: bgMain }}>
@@ -306,6 +350,18 @@ function PDV() {
                         <ShoppingCart size={28} color="#8b5cf6" />
                         <h1 style={{ fontSize: '24px', fontWeight: '700', color: textPrimary, margin: 0 }}>Ponto de Venda</h1>
                     </div>
+
+                    {/* Store Selector */}
+                    <div style={{ minWidth: '250px' }}>
+                        <StoreDropdown
+                            stores={stores}
+                            selectedStore={store}
+                            onChange={setStore}
+                            onNewStore={() => { }} // Disable creation in PDV for simplicity or redirect
+                            onManage={() => { }}   // Disable management in PDV
+                        />
+                    </div>
+
                     <button
                         className="btn btn-outline"
                         onClick={() => navigate('/')}
@@ -339,6 +395,7 @@ function PDV() {
                         value={busca}
                         onChange={(e) => setBusca(e.target.value)}
                         style={{ fontSize: '1.125rem', padding: '0.75rem 0.75rem 0.75rem 3rem', width: '100%' }}
+                        disabled={store === 'all'}
                     />
                 </div>
 
@@ -350,13 +407,30 @@ function PDV() {
                     overflowY: 'auto',
                     paddingBottom: '1rem'
                 }}>
-                    {produtosFiltrados.map(produto => (
-                        <ProductCard
-                            key={produto.id}
-                            produto={produto}
-                            onClick={() => adicionarAoCarrinho(produto)}
-                        />
-                    ))}
+                    {store === 'all' ? (
+                        <div style={{
+                            gridColumn: '1 / -1',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '300px',
+                            color: textSecondary,
+                            opacity: 0.7
+                        }}>
+                            <Store size={64} style={{ marginBottom: '1rem' }} />
+                            <p style={{ fontSize: '18px', fontWeight: '600' }}>Selecione uma loja no menu superior</p>
+                            <p>Para visualizar produtos e realizar vendas</p>
+                        </div>
+                    ) : (
+                        produtosFiltrados.map(produto => (
+                            <ProductCard
+                                key={produto.id}
+                                produto={produto}
+                                onClick={() => adicionarAoCarrinho(produto)}
+                            />
+                        ))
+                    )}
                 </div>
             </div>
 
@@ -449,10 +523,12 @@ function PDV() {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                gap: '0.5rem'
+                                gap: '0.5rem',
+                                opacity: store === 'all' ? 0.5 : 1,
+                                cursor: store === 'all' ? 'not-allowed' : 'pointer'
                             }}
-                            disabled={carrinho.length === 0}
-                            onClick={() => setShowPagamento(true)}
+                            disabled={carrinho.length === 0 || store === 'all'}
+                            onClick={handleOpenPayment}
                         >
                             <CreditCard size={20} />
                             Finalizar Venda
@@ -462,14 +538,16 @@ function PDV() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                             <button
                                 className="btn btn-outline"
-                                disabled={carrinho.length === 0}
+                                disabled={carrinho.length === 0 || store === 'all'}
                                 onClick={handleSaveAsBudget}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     gap: '0.5rem',
-                                    fontSize: '14px'
+                                    fontSize: '14px',
+                                    opacity: store === 'all' ? 0.5 : 1,
+                                    cursor: store === 'all' ? 'not-allowed' : 'pointer'
                                 }}
                             >
                                 <FileText size={16} />

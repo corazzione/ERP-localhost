@@ -72,6 +72,7 @@ model Produto {
   codigo          String    @unique
   nome            String
   descricao       String?
+  imagemUrl       String?
   categoria       String?
   unidade         String    @default("UN")
   precoVenda      Decimal   @db.Decimal(10, 2)
@@ -79,6 +80,8 @@ model Produto {
   estoqueAtual    Int       @default(0)
   estoqueMinimo   Int       @default(0)
   ativo           Boolean   @default(true)
+  lojaId          String?   // Added lojaId
+  loja            Loja?     @relation(fields: [lojaId], references: [id])
   criadoEm        DateTime  @default(now())
   
   variacoes       ProdutoVariacao[]
@@ -91,6 +94,7 @@ model Produto {
   @@index([codigo])
   @@index([ativo])
   @@index([nome])
+  @@index([lojaId])
 }
 
 model ProdutoVariacao {
@@ -114,6 +118,8 @@ model Loja {
   criadoEm  DateTime @default(now())
   
   vendas    Venda[]
+  orcamentos Orcamento[]
+  produtos  Produto[] // Added relation
   
   @@index([codigo])
   @@index([ativo])
@@ -308,6 +314,7 @@ model Orcamento {
   numero              String    @unique
   clienteId           String?
   usuarioId           String
+  lojaId              String?   // Added lojaId
   dataEmissao         DateTime  @default(now())
   validadeAte         DateTime?
   status              String    @default("pendente") // pendente, aprovado, recusado, expirado
@@ -325,6 +332,7 @@ model Orcamento {
   
   cliente             Cliente?  @relation(fields: [clienteId], references: [id])
   usuario             Usuario   @relation(fields: [usuarioId], references: [id])
+  loja                Loja?     @relation(fields: [lojaId], references: [id])
   itens               ItemOrcamento[]
   pedido              Pedido?
 }
@@ -466,4 +474,18 @@ model Notification {
 
   @@index([userId])
   @@index([isRead])
+}
+
+// ===== FORMAS DE PAGAMENTO =====
+model PaymentMethod {
+  id              String   @id @default(uuid())
+  slug            String   @unique // dinheiro, pix, cartao_credito, etc.
+  label           String   // Dinheiro, PIX, Crédito
+  icon            String?  // Nome do ícone para UI
+  active          Boolean  @default(true)
+  requiresChange  Boolean  @default(false) // Se precisa de troco
+  requiresParcels Boolean  @default(false) // Se aceita parcelamento
+  requiresClient  Boolean  @default(false) // Se exige cliente
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
