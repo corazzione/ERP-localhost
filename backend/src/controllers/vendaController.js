@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 
 export const criarVenda = async (req, res) => {
+    // Force restart
     try {
         const { clienteId, itens, desconto, formaPagamento, observacoes, usarCredito } = req.body;
         const usuarioId = req.userId;
@@ -50,6 +51,7 @@ export const criarVenda = async (req, res) => {
                     numero: numeroVenda,
                     clienteId: clienteId || null,
                     usuarioId,
+                    lojaId: req.body.lojaId || null, // Add lojaId
                     subtotal,
                     desconto: desconto || 0,
                     total: totalInicial,

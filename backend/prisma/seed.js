@@ -128,7 +128,7 @@ async function main() {
     console.log('✅ Produtos criados');
 
     // Criar fornecedor
-    await prisma.fornecedorups({
+    await prisma.fornecedor.upsert({
         where: { cnpj: '12345678000199' },
         update: {},
         create: {
@@ -140,6 +140,24 @@ async function main() {
         }
     });
     console.log('✅ Fornecedor criado');
+
+    // ===== FORMAS DE PAGAMENTO =====
+    const paymentMethods = [
+        { slug: 'dinheiro', label: 'Dinheiro', icon: 'DollarSign', requiresChange: true },
+        { slug: 'pix', label: 'PIX', icon: 'Smartphone' },
+        { slug: 'cartao_credito', label: 'Cartão de Crédito', icon: 'CreditCard', requiresParcels: true },
+        { slug: 'cartao_debito', label: 'Cartão de Débito', icon: 'CreditCard' },
+        { slug: 'crediario', label: 'Crediário', icon: 'Calendar', requiresClient: true, requiresParcels: true }
+    ];
+
+    for (const method of paymentMethods) {
+        await prisma.paymentMethod.upsert({
+            where: { slug: method.slug },
+            update: {},
+            create: method
+        });
+    }
+    console.log('✅ Formas de pagamento criadas');
 
     // Config urações do sistema
     await prisma.configuracao.upsert({

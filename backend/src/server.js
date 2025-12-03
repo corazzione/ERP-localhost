@@ -22,6 +22,7 @@ import pedidoCompraRoutes from './routes/pedidoCompraRoutes.js';
 import pixRoutes from './routes/pixRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import storeRoutes from './routes/storeRoutes.js';
+import paymentMethodRoutes from './routes/paymentMethodRoutes.js';
 import { prisma } from './lib/prisma.js';
 
 dotenv.config();
@@ -60,6 +61,7 @@ app.use('/api/pedidos', pedidoRoutes);
 app.use('/api/pedidos-compra', pedidoCompraRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/stores', storeRoutes);
+app.use('/api/payment-methods', paymentMethodRoutes);
 app.use('/api', pixRoutes); // Rotas PIX
 
 // Rota de teste

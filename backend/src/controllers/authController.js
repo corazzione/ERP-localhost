@@ -4,20 +4,33 @@ import jwt from 'jsonwebtoken';
 import { CONFIG, ERRORS } from '../constants.js';
 
 export const login = async (req, res) => {
+    console.log('🔍 DEBUG: Login attempt');
+    console.log('🔍 DEBUG: req.body:', req.body);
     try {
         const { email, senha } = req.body;
+
+        if (!email || !senha) {
+            console.log('❌ DEBUG: Missing email or senha');
+            return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+        }
 
         const usuario = await prisma.usuario.findUnique({
             where: { email }
         });
 
+        console.log('🔍 DEBUG: User found:', !!usuario);
+
         if (!usuario || !usuario.ativo) {
+            console.log('❌ DEBUG: User not found or inactive');
             return res.status(401).json({ error: ERRORS.INVALID_CREDENTIALS });
         }
 
+        console.log('🔍 DEBUG: Verifying password...');
         const senhaValida = await bcrypt.compare(senha, usuario.senha);
+        console.log('🔍 DEBUG: Password valid:', senhaValida);
 
         if (!senhaValida) {
+            console.log('❌ DEBUG: Invalid password');
             return res.status(401).json({ error: ERRORS.INVALID_CREDENTIALS });
         }
 
@@ -35,6 +48,7 @@ export const login = async (req, res) => {
             { expiresIn: CONFIG.JWT.REFRESH_EXPIRATION }
         );
 
+        console.log('✅ DEBUG: Login successful');
         res.json({
             token,
             refreshToken,
@@ -46,8 +60,8 @@ export const login = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Erro no login:', error);
-        res.status(500).json({ error: ERRORS.SERVER_ERROR });
+        console.error('❌ DEBUG: Erro no login:', error);
+        res.status(500).json({ error: ERRORS.SERVER_ERROR, details: error.message });
     }
 };
 

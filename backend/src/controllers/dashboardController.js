@@ -48,10 +48,11 @@ export const obterDadosDashboard = async (req, res) => {
         if (store && store !== 'all') {
             whereClause.lojaId = store;
         } else {
-            // Se for 'all', considerar apenas lojas ativas
-            whereClause.loja = {
-                ativo: true
-            };
+            // Se for 'all', incluir vendas com loja ativa OU sem loja (global)
+            whereClause.OR = [
+                { loja: { ativo: true } },
+                { lojaId: null }
+            ];
         }
 
         // Vendas do período com detalhes
@@ -80,9 +81,10 @@ export const obterDadosDashboard = async (req, res) => {
         if (store && store !== 'all') {
             whereClauseAnterior.lojaId = store;
         } else {
-            whereClauseAnterior.loja = {
-                ativo: true
-            };
+            whereClauseAnterior.OR = [
+                { loja: { ativo: true } },
+                { lojaId: null }
+            ];
         }
 
         const vendasPeriodoAnterior = await prisma.venda.findMany({
@@ -366,7 +368,11 @@ export const obterVisaoGeralInteligente = async (req, res) => {
         if (store && store !== 'all') {
             storeFilter.lojaId = store;
         } else {
-            storeFilter.loja = { ativo: true };
+            // Incluir global (null) e ativas
+            storeFilter.OR = [
+                { loja: { ativo: true } },
+                { lojaId: null }
+            ];
         }
 
         let responseData = {
@@ -602,9 +608,10 @@ async function obterDadosGraficoVendas(inicio, fim, store) {
     if (store && store !== 'all') {
         whereClause.lojaId = store;
     } else {
-        whereClause.loja = {
-            ativo: true
-        };
+        whereClause.OR = [
+            { loja: { ativo: true } },
+            { lojaId: null }
+        ];
     }
 
     const vendas = await prisma.venda.groupBy({
@@ -636,4 +643,3 @@ async function obterDadosGraficoVendas(inicio, fim, store) {
 
     return dadosGrafico;
 }
-
