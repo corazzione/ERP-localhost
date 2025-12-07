@@ -24,7 +24,7 @@ const InvoiceService = {
                 responseType: 'blob'
             });
 
-            const blob = new Blob([response.data], { type: response.headers['content-type'] });
+            const blob = new Blob([response.data], { type: 'application/pdf' });
 
             // Check if it's JSON (error) despite blob response type
             if (blob.type === 'application/json' || blob.type.includes('json')) {
@@ -36,13 +36,13 @@ const InvoiceService = {
 
             // Criar URL do blob
             const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `recibo-${vendaId}.pdf`);
-            document.body.appendChild(link);
-            link.click();
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `recibo-${vendaId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
 
-            link.remove();
+            a.remove();
             window.URL.revokeObjectURL(url);
 
             return true;

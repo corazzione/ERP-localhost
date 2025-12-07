@@ -88,7 +88,9 @@ const runTest = async () => {
         await page.pdf({
             path: path.join(__dirname, 'recibo-teste-a4.pdf'),
             format: 'A4',
-            printBackground: true
+            printBackground: true,
+            scale: 1.25, // Escala ajustada para caber sem cortar
+            margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
         });
 
         // Gerar PDF 80mm

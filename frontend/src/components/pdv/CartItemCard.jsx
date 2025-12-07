@@ -1,24 +1,39 @@
+import { memo, useState, useCallback, useMemo } from 'react';
 import { Minus, Plus, Trash2, Tag, Percent } from 'lucide-react';
-import { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { formatCurrency } from '../../utils/formatters';
 
 /**
  * CartItemCard - Item do carrinho com desconto em R$ ou %
+ * Optimized with React.memo to prevent unnecessary re-renders
  */
-function CartItemCard({ item, onUpdateQuantity, onUpdateDiscount, onRemove }) {
+const CartItemCard = memo(function CartItemCard({ item, onUpdateQuantity, onUpdateDiscount, onRemove }) {
     const { isDark } = useTheme();
     const [discountType, setDiscountType] = useState('R$');
     const [discountInput, setDiscountInput] = useState('');
 
-    const cardBg = isDark ? '#1e293b' : '#ffffff';
-    const textPrimary = isDark ? '#f1f5f9' : '#1f2937';
-    const textSecondary = isDark ? '#94a3b8' : '#6b7280';
-    const borderColor = isDark ? '#334155' : '#e5e7eb';
+    // Memoized theme colors
+    const themeColors = useMemo(() => ({
+        cardBg: isDark ? '#1e293b' : '#ffffff',
+        textPrimary: isDark ? '#f1f5f9' : '#1f2937',
+        textSecondary: isDark ? '#94a3b8' : '#6b7280',
+        borderColor: isDark ? '#334155' : '#e5e7eb',
+        inputBg: isDark ? '#0f172a' : '#f9fafb'
+    }), [isDark]);
 
-    const subtotalSemDesconto = item.quantidade * parseFloat(item.precoVenda);
+    const { cardBg, textPrimary, textSecondary, borderColor, inputBg } = themeColors;
+
+    // Memoized calculations
+    const subtotalSemDesconto = useMemo(() =>
+        item.quantidade * parseFloat(item.precoVenda),
+        [item.quantidade, item.precoVenda]
+    );
+
     const subtotalComDesconto = item.total;
 
-    const handleDiscountInputChange = (value) => {
+    // Memoized handlers
+    const handleDiscountInputChange = useCallback((e) => {
+        const value = e.target.value;
         setDiscountInput(value);
         const numValue = parseFloat(value) || 0;
 
@@ -28,14 +43,42 @@ function CartItemCard({ item, onUpdateQuantity, onUpdateDiscount, onRemove }) {
         } else {
             onUpdateDiscount(item.id, numValue);
         }
-    };
+    }, [discountType, subtotalSemDesconto, item.id, onUpdateDiscount]);
 
-    const handleToggleType = () => {
+    const handleToggleType = useCallback(() => {
         const newType = discountType === '%' ? 'R$' : '%';
         setDiscountType(newType);
         setDiscountInput('');
         onUpdateDiscount(item.id, 0);
-    };
+    }, [discountType, item.id, onUpdateDiscount]);
+
+    const handleRemove = useCallback(() => {
+        onRemove(item.id);
+    }, [onRemove, item.id]);
+
+    const handleDecreaseQty = useCallback(() => {
+        onUpdateQuantity(item.id, item.quantidade - 1);
+    }, [onUpdateQuantity, item.id, item.quantidade]);
+
+    const handleIncreaseQty = useCallback(() => {
+        onUpdateQuantity(item.id, item.quantidade + 1);
+    }, [onUpdateQuantity, item.id, item.quantidade]);
+
+    const handleMouseEnterTrash = useCallback((e) => {
+        e.currentTarget.style.color = '#ef4444';
+    }, []);
+
+    const handleMouseLeaveTrash = useCallback((e) => {
+        e.currentTarget.style.color = textSecondary;
+    }, [textSecondary]);
+
+    const handleInputFocus = useCallback((e) => {
+        e.currentTarget.style.borderColor = '#8b5cf6';
+    }, []);
+
+    const handleInputBlur = useCallback((e) => {
+        e.currentTarget.style.borderColor = borderColor;
+    }, [borderColor]);
 
     return (
         <div style={{
@@ -69,7 +112,7 @@ function CartItemCard({ item, onUpdateQuantity, onUpdateDiscount, onRemove }) {
                 </div>
 
                 <button
-                    onClick={() => onRemove(item.id)}
+                    onClick={handleRemove}
                     style={{
                         background: 'transparent',
                         border: 'none',
@@ -78,8 +121,8 @@ function CartItemCard({ item, onUpdateQuantity, onUpdateDiscount, onRemove }) {
                         color: textSecondary,
                         transition: 'color 150ms'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = textSecondary}
+                    onMouseEnter={handleMouseEnterTrash}
+                    onMouseLeave={handleMouseLeaveTrash}
                 >
                     <Trash2 size={18} />
                 </button>
@@ -93,7 +136,7 @@ function CartItemCard({ item, onUpdateQuantity, onUpdateDiscount, onRemove }) {
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <button
-                        onClick={() => onUpdateQuantity(item.id, item.quantidade - 1)}
+                        onClick={handleDecreaseQty}
                         disabled={item.quantidade <= 1}
                         style={{
                             width: '32px',
@@ -122,7 +165,7 @@ function CartItemCard({ item, onUpdateQuantity, onUpdateDiscount, onRemove }) {
                     </span>
 
                     <button
-                        onClick={() => onUpdateQuantity(item.id, item.quantidade + 1)}
+                        onClick={handleIncreaseQty}
                         style={{
                             width: '32px',
                             height: '32px',
@@ -140,7 +183,7 @@ function CartItemCard({ item, onUpdateQuantity, onUpdateDiscount, onRemove }) {
                 </div>
 
                 <div style={{ fontSize: '15px', color: textSecondary }}>
-                    R$ {parseFloat(item.precoVenda).toFixed(2)} <span style={{ fontSize: '12px' }}>un</span>
+                    {formatCurrency(item.precoVenda)} <span style={{ fontSize: '12px' }}>un</span>
                 </div>
             </div>
 
@@ -159,7 +202,7 @@ function CartItemCard({ item, onUpdateQuantity, onUpdateDiscount, onRemove }) {
                 <input
                     type="text"
                     value={discountInput}
-                    onChange={(e) => handleDiscountInputChange(e.target.value)}
+                    onChange={handleDiscountInputChange}
                     placeholder="0"
                     style={{
                         flex: 1,
@@ -167,12 +210,12 @@ function CartItemCard({ item, onUpdateQuantity, onUpdateDiscount, onRemove }) {
                         fontSize: '14px',
                         border: `1px solid ${borderColor}`,
                         borderRadius: '6px',
-                        backgroundColor: isDark ? '#0f172a' : '#f9fafb',
+                        backgroundColor: inputBg,
                         color: textPrimary,
                         outline: 'none'
                     }}
-                    onFocus={(e) => e.currentTarget.style.borderColor = '#8b5cf6'}
-                    onBlur={(e) => e.currentTarget.style.borderColor = borderColor}
+                    onFocus={handleInputFocus}
+                    onBlur={handleInputBlur}
                 />
 
                 <button
@@ -184,7 +227,7 @@ function CartItemCard({ item, onUpdateQuantity, onUpdateDiscount, onRemove }) {
                         fontWeight: '600',
                         border: `1px solid ${borderColor}`,
                         borderRadius: '6px',
-                        backgroundColor: discountType === '%' ? '#8b5cf6' : (isDark ? '#0f172a' : '#f9fafb'),
+                        backgroundColor: discountType === '%' ? '#8b5cf6' : inputBg,
                         color: discountType === '%' ? '#ffffff' : textPrimary,
                         cursor: 'pointer',
                         display: 'flex',
@@ -213,7 +256,7 @@ function CartItemCard({ item, onUpdateQuantity, onUpdateDiscount, onRemove }) {
                             textDecoration: 'line-through',
                             marginBottom: '2px'
                         }}>
-                            R$ {subtotalSemDesconto.toFixed(2)}
+                            {formatCurrency(subtotalSemDesconto)}
                         </div>
                     )}
                     <div style={{
@@ -221,12 +264,12 @@ function CartItemCard({ item, onUpdateQuantity, onUpdateDiscount, onRemove }) {
                         fontWeight: '700',
                         color: item.desconto > 0 ? '#10b981' : '#8b5cf6'
                     }}>
-                        R$ {subtotalComDesconto.toFixed(2)}
+                        {formatCurrency(subtotalComDesconto)}
                     </div>
                 </div>
             </div>
         </div>
     );
-}
+});
 
 export default CartItemCard;

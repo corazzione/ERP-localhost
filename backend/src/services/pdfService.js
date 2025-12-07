@@ -85,23 +85,13 @@ export const generatePdfFromHtml = async (htmlContent) => {
 
         await page.setContent(htmlContent, { waitUntil: ['load', 'networkidle0'] });
 
-        // Force screen media type to ensure visibility of elements hidden in print mode by default
+        // Force screen media type to ensure visibility of elements
         await page.emulateMediaType('screen');
 
-        // DEBUG: Take a screenshot to see what the browser actually renders
-        try {
-            const path = await import('path');
-            const screenshotPath = path.resolve(process.cwd(), 'debug_app_render.png');
-            await page.screenshot({ path: screenshotPath, fullPage: true });
-            console.log('DEBUG: Screenshot salvo em:', screenshotPath);
-        } catch (err) {
-            console.error('DEBUG: Erro ao tirar screenshot:', err);
-        }
-
         const pdf = await page.pdf({
-            width: '80mm', // Set to 80mm as per requirements
+            format: 'A4', // Formato A4 para preencher a página toda
             printBackground: true,
-            scale: 0.38, // Scale down A4 content to fit 80mm
+            scale: 1.25, // Escala ajustada para caber sem cortar
             margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
         });
 

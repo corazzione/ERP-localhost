@@ -1,32 +1,67 @@
-import { useState, useRef, useEffect } from 'react';
+import { memo, useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Search, UserPlus, Phone, FileText } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 /**
  * 🪷 ClientSelector - Autocomplete inteligente de cliente
+ * Optimized with React.memo and debounced search
  */
-function ClientSelector({ clientes, onSelect, onNewClient }) {
+const ClientSelector = memo(function ClientSelector({ clientes, onSelect, onNewClient }) {
     const { isDark } = useTheme();
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [isOpen, setIsOpen] = useState(false);
     const inputRef = useRef(null);
     const dropdownRef = useRef(null);
+    const debounceRef = useRef(null);
 
-    const textPrimary = isDark ? '#f1f5f9' : '#1f2937';
-    const textSecondary = isDark ? '#94a3b8' : '#6b7280';
-    const borderColor = isDark ? '#334155' : '#e5e7eb';
-    const bgCard = isDark ? '#1e293b' : '#ffffff';
-    const bgHover = isDark ? '#334155' : '#f3f4f6';
+    // Memoized theme colors
+    const themeColors = useMemo(() => ({
+        textPrimary: isDark ? '#f1f5f9' : '#1f2937',
+        textSecondary: isDark ? '#94a3b8' : '#6b7280',
+        borderColor: isDark ? '#334155' : '#e5e7eb',
+        bgCard: isDark ? '#1e293b' : '#ffffff',
+        bgHover: isDark ? '#334155' : '#f3f4f6',
+        bgInput: isDark ? '#0f172a' : '#ffffff'
+    }), [isDark]);
 
-    // Filtrar clientes
-    const clientesFiltrados = clientes.filter(cliente => {
-        const term = searchTerm.toLowerCase();
-        return (
+    const { textPrimary, textSecondary, borderColor, bgCard, bgHover, bgInput } = themeColors;
+
+    // Debounced search
+    const handleSearchChange = useCallback((e) => {
+        const value = e.target.value;
+        setSearchTerm(value);
+        setIsOpen(true);
+
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+
+        debounceRef.current = setTimeout(() => {
+            setDebouncedSearch(value);
+        }, 200);
+    }, []);
+
+    // Cleanup debounce on unmount
+    useEffect(() => {
+        return () => {
+            if (debounceRef.current) {
+                clearTimeout(debounceRef.current);
+            }
+        };
+    }, []);
+
+    // Filtrar clientes - memoized
+    const clientesFiltrados = useMemo(() => {
+        const term = debouncedSearch.toLowerCase();
+        if (!term) return clientes.slice(0, 20); // Limit initial results
+
+        return clientes.filter(cliente =>
             cliente.nome?.toLowerCase().includes(term) ||
             cliente.cpf?.includes(term) ||
             cliente.telefone?.includes(term)
-        );
-    });
+        ).slice(0, 20); // Limit results
+    }, [clientes, debouncedSearch]);
 
     // Fechar dropdown ao clicar fora
     useEffect(() => {
@@ -40,11 +75,29 @@ function ClientSelector({ clientes, onSelect, onNewClient }) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleSelect = (cliente) => {
+    const handleSelect = useCallback((cliente) => {
         onSelect(cliente);
         setSearchTerm('');
+        setDebouncedSearch('');
         setIsOpen(false);
-    };
+    }, [onSelect]);
+
+    const handleFocus = useCallback(() => {
+        setIsOpen(true);
+    }, []);
+
+    const handleNewClientClick = useCallback(() => {
+        onNewClient();
+        setIsOpen(false);
+    }, [onNewClient]);
+
+    const handleNewClientHover = useCallback((e) => {
+        e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.1)';
+    }, []);
+
+    const handleNewClientLeave = useCallback((e) => {
+        e.currentTarget.style.backgroundColor = 'transparent';
+    }, []);
 
     return (
         <div style={{ position: 'relative' }} ref={dropdownRef}>
@@ -66,18 +119,15 @@ function ClientSelector({ clientes, onSelect, onNewClient }) {
                     type="text"
                     placeholder="Buscar cliente por nome, CPF ou telefone..."
                     value={searchTerm}
-                    onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setIsOpen(true);
-                    }}
-                    onFocus={() => setIsOpen(true)}
+                    onChange={handleSearchChange}
+                    onFocus={handleFocus}
                     style={{
                         width: '100%',
                         padding: '12px 48px 12px 44px',
                         fontSize: '14px',
                         border: `2px solid ${isOpen ? '#8b5cf6' : borderColor}`,
                         borderRadius: '8px',
-                        backgroundColor: isDark ? '#0f172a' : '#ffffff',
+                        backgroundColor: bgInput,
                         color: textPrimary,
                         outline: 'none',
                         transition: 'all 150ms'
@@ -86,10 +136,7 @@ function ClientSelector({ clientes, onSelect, onNewClient }) {
 
                 {/* Botão Novo Cliente */}
                 <button
-                    onClick={() => {
-                        onNewClient();
-                        setIsOpen(false);
-                    }}
+                    onClick={handleNewClientClick}
                     style={{
                         position: 'absolute',
                         right: '6px',
@@ -108,8 +155,8 @@ function ClientSelector({ clientes, onSelect, onNewClient }) {
                         fontWeight: '600',
                         transition: 'background 150ms'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.1)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    onMouseEnter={handleNewClientHover}
+                    onMouseLeave={handleNewClientLeave}
                     title="Cadastrar novo cliente"
                 >
                     <UserPlus size={16} />
@@ -145,10 +192,7 @@ function ClientSelector({ clientes, onSelect, onNewClient }) {
                                 <>
                                     <p style={{ marginBottom: '12px' }}>Nenhum cliente encontrado</p>
                                     <button
-                                        onClick={() => {
-                                            onNewClient();
-                                            setIsOpen(false);
-                                        }}
+                                        onClick={handleNewClientClick}
                                         style={{
                                             padding: '8px 16px',
                                             background: '#8b5cf6',
@@ -169,78 +213,111 @@ function ClientSelector({ clientes, onSelect, onNewClient }) {
                         </div>
                     ) : (
                         clientesFiltrados.map(cliente => (
-                            <div
+                            <ClientRow
                                 key={cliente.id}
-                                onClick={() => handleSelect(cliente)}
-                                style={{
-                                    padding: '14px 16px',
-                                    cursor: 'pointer',
-                                    borderBottom: `1px solid ${borderColor}`,
-                                    transition: 'background 100ms',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = bgHover}
-                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                            >
-                                {/* Avatar */}
-                                <div style={{
-                                    width: '36px',
-                                    height: '36px',
-                                    borderRadius: '50%',
-                                    backgroundColor: '#8b5cf6',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: 'white',
-                                    fontSize: '14px',
-                                    fontWeight: '600',
-                                    flexShrink: 0
-                                }}>
-                                    {cliente.nome?.charAt(0).toUpperCase()}
-                                </div>
-
-                                {/* Info */}
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{
-                                        fontSize: '15px',
-                                        fontWeight: '600',
-                                        color: textPrimary,
-                                        marginBottom: '2px',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap'
-                                    }}>
-                                        {cliente.nome}
-                                    </div>
-                                    <div style={{
-                                        fontSize: '12px',
-                                        color: textSecondary,
-                                        display: 'flex',
-                                        gap: '12px'
-                                    }}>
-                                        {cliente.telefone && (
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <Phone size={12} />
-                                                {cliente.telefone}
-                                            </span>
-                                        )}
-                                        {cliente.cpf && (
-                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <FileText size={12} />
-                                                {cliente.cpf}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                                cliente={cliente}
+                                onSelect={handleSelect}
+                                textPrimary={textPrimary}
+                                textSecondary={textSecondary}
+                                borderColor={borderColor}
+                                bgHover={bgHover}
+                            />
                         ))
                     )}
                 </div>
             )}
         </div>
     );
-}
+});
+
+// Memoized Client Row Component
+const ClientRow = memo(function ClientRow({
+    cliente,
+    onSelect,
+    textPrimary,
+    textSecondary,
+    borderColor,
+    bgHover
+}) {
+    const handleClick = useCallback(() => {
+        onSelect(cliente);
+    }, [onSelect, cliente]);
+
+    const handleMouseEnter = useCallback((e) => {
+        e.currentTarget.style.backgroundColor = bgHover;
+    }, [bgHover]);
+
+    const handleMouseLeave = useCallback((e) => {
+        e.currentTarget.style.backgroundColor = 'transparent';
+    }, []);
+
+    return (
+        <div
+            onClick={handleClick}
+            style={{
+                padding: '14px 16px',
+                cursor: 'pointer',
+                borderBottom: `1px solid ${borderColor}`,
+                transition: 'background 100ms',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+            }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+        >
+            {/* Avatar */}
+            <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                backgroundColor: '#8b5cf6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '600',
+                flexShrink: 0
+            }}>
+                {cliente.nome?.charAt(0).toUpperCase()}
+            </div>
+
+            {/* Info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    color: textPrimary,
+                    marginBottom: '2px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                }}>
+                    {cliente.nome}
+                </div>
+                <div style={{
+                    fontSize: '12px',
+                    color: textSecondary,
+                    display: 'flex',
+                    gap: '12px'
+                }}>
+                    {cliente.telefone && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Phone size={12} />
+                            {cliente.telefone}
+                        </span>
+                    )}
+                    {cliente.cpf && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <FileText size={12} />
+                            {cliente.cpf}
+                        </span>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+});
 
 export default ClientSelector;

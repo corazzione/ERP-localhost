@@ -1,29 +1,47 @@
+import { memo, useCallback } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { formatCurrency } from '../../utils/formatters';
 
 /**
  * 🪷 ProductCard - Card premium de produto com hover effect
  * Inspirado em Shopify POS / Square / Lightspeed
+ * Optimized with React.memo to prevent unnecessary re-renders
  */
-function ProductCard({ produto, onClick }) {
+const ProductCard = memo(function ProductCard({ produto, onClick }) {
     const { isDark } = useTheme();
 
     const cardBg = isDark ? '#1e293b' : '#ffffff';
     const textPrimary = isDark ? '#f1f5f9' : '#1f2937';
     const textSecondary = isDark ? '#94a3b8' : '#6b7280';
     const borderColor = isDark ? '#334155' : '#e5e7eb';
+    const shadowDefault = isDark ? '0 1px 3px rgba(0, 0, 0, 0.3)' : '0 1px 3px rgba(0, 0, 0, 0.1)';
+    const shadowHover = isDark ? '0 4px 12px rgba(0, 0, 0, 0.4)' : '0 4px 12px rgba(0, 0, 0, 0.15)';
+
+    // Memoized click handler
+    const handleClick = useCallback(() => {
+        onClick(produto);
+    }, [onClick, produto]);
+
+    const handleMouseEnter = useCallback((e) => {
+        e.currentTarget.style.transform = 'scale(1.01)';
+        e.currentTarget.style.boxShadow = shadowHover;
+    }, [shadowHover]);
+
+    const handleMouseLeave = useCallback((e) => {
+        e.currentTarget.style.transform = 'scale(1)';
+        e.currentTarget.style.boxShadow = shadowDefault;
+    }, [shadowDefault]);
 
     return (
         <div
-            onClick={onClick}
+            onClick={handleClick}
             style={{
                 backgroundColor: cardBg,
                 borderRadius: '12px',
                 padding: '20px',
                 cursor: 'pointer',
                 transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: isDark
-                    ? '0 1px 3px rgba(0, 0, 0, 0.3)'
-                    : '0 1px 3px rgba(0, 0, 0, 0.1)',
+                boxShadow: shadowDefault,
                 border: `1px solid ${borderColor}`,
                 display: 'flex',
                 flexDirection: 'column',
@@ -31,18 +49,8 @@ function ProductCard({ produto, onClick }) {
                 position: 'relative',
                 overflow: 'hidden'
             }}
-            onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.01)';
-                e.currentTarget.style.boxShadow = isDark
-                    ? '0 4px 12px rgba(0, 0, 0, 0.4)'
-                    : '0 4px 12px rgba(0, 0, 0, 0.15)';
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = isDark
-                    ? '0 1px 3px rgba(0, 0, 0, 0.3)'
-                    : '0 1px 3px rgba(0, 0, 0, 0.1)';
-            }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
         >
             {/* Image Placeholder */}
             <div style={{
@@ -60,6 +68,7 @@ function ProductCard({ produto, onClick }) {
                     <img
                         src={produto.imagemUrl}
                         alt={produto.nome}
+                        loading="lazy"
                         style={{
                             width: '100%',
                             height: '100%',
@@ -120,10 +129,7 @@ function ProductCard({ produto, onClick }) {
                     color: '#8b5cf6',
                     marginTop: 'auto'
                 }}>
-                    R$ {parseFloat(produto.precoVenda).toLocaleString('pt-BR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    })}
+                    {formatCurrency(produto.precoVenda)}
                 </div>
 
                 {/* Stock indicator (optional) */}
@@ -154,6 +160,6 @@ function ProductCard({ produto, onClick }) {
             }} />
         </div>
     );
-}
+});
 
 export default ProductCard;

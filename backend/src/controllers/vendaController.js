@@ -286,9 +286,17 @@ export const listarVendas = async (req, res) => {
 
         // Filtro por Status - Map frontend status to backend values
         // Backend values: 'concluida', 'pendente', 'cancelada', 'orcamento'
+        // 'crediario' is a payment method, not a status
         if (status && status !== 'todos') {
-            // Map 'pago' -> 'concluida' for compatibility
-            where.status = status === 'pago' ? 'concluida' : status;
+            if (status === 'pago') {
+                // Map 'pago' -> 'concluida' for compatibility
+                where.status = 'concluida';
+            } else if (status === 'crediario') {
+                // Crediário é filtrado por formaPagamento, não por status
+                where.formaPagamento = 'crediario';
+            } else {
+                where.status = status;
+            }
         }
 
         // Filtro por Forma de Pagamento
@@ -382,8 +390,18 @@ export const obterKPIsVendas = async (req, res) => {
             };
         }
 
+        // Filtro por status - mapear valores do frontend para valores do backend
+        // 'pago' no frontend corresponde a 'concluida' no banco
+        // 'crediario' é uma forma de pagamento, não um status
         if (status && status !== 'todos') {
-            where.status = status;
+            if (status === 'pago') {
+                where.status = 'concluida';
+            } else if (status === 'crediario') {
+                // Crediário é filtrado por formaPagamento, não por status
+                where.formaPagamento = 'crediario';
+            } else {
+                where.status = status;
+            }
         }
 
         if (formaPagamento && formaPagamento !== 'todas') {

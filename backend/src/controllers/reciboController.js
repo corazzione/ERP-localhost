@@ -90,24 +90,14 @@ export const getRecibo = async (req, res) => {
         const templateHtml = loadTemplate();
         const htmlPreenchido = replacePlaceholders(templateHtml, dadosRecibo);
 
-        // DEBUG: Save HTML to file to verify content
-        try {
-            const fs = await import('fs');
-            const path = await import('path');
-            const debugPath = path.resolve(process.cwd(), 'debug_last_receipt.html');
-            fs.writeFileSync(debugPath, htmlPreenchido);
-            console.log('DEBUG: HTML do recibo salvo em:', debugPath);
-        } catch (dbgErr) {
-            console.error('DEBUG: Erro ao salvar HTML de debug:', dbgErr);
-        }
-
         // 5. Gerar PDF
         const pdfBuffer = await generatePdfFromHtml(htmlPreenchido);
 
-        // 6. Retornar PDF
+        // 6. Retornar PDF (Correção para evitar arquivo corrompido)
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=recibo-${venda.numero}.pdf`);
-        res.send(pdfBuffer);
+        res.setHeader('Content-Disposition', `attachment; filename="recibo-${venda.numero}.pdf"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        return res.status(200).end(pdfBuffer);
 
     } catch (error) {
         console.error('Erro ao gerar recibo:', error);

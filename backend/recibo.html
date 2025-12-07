@@ -1427,6 +1427,70 @@
             }
         }
     </style>
+    <style>
+        .ff0 {
+            font-family: sans-serif;
+            visibility: visible !important;
+        }
+
+        /* HIDING VIEWER UI ELEMENTS FOR CLEAN PDF */
+        #sidebar {
+            display: none !important;
+        }
+
+        #page-container {
+            background-color: white !important;
+            background-image: none !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            left: 0 !important;
+            top: 0 !important;
+        }
+
+        .pf {
+            box-shadow: none !important;
+            margin: 0 !important;
+        }
+
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        html,
+        body {
+            background-color: white !important;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            /* Centralização */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        #sidebar {
+            display: none !important;
+        }
+
+        #page-container {
+            background-color: white !important;
+            background-image: none !important;
+            box-shadow: none !important;
+            margin: 0 auto !important;
+            /* Forces horizontal centering */
+            padding: 0;
+            left: auto !important;
+            top: 0 !important;
+            position: relative !important;
+        }
+
+        .pf {
+            box-shadow: none !important;
+            margin: 0 !important;
+        }
+    </style>
     <script>
         /*
          Copyright 2012 Mozilla Foundation 
@@ -1562,16 +1626,16 @@
 
 
 
-                <div class="t m0 xa h3 y13 ff2 fs1 fc1 sc0 ls0 ws1">R$ {{subtotal}}</div>
-                <div class="t m0 xa h3 y14 ff2 fs1 fc1 sc0 ls0">R$ {{desconto}}</div>
-                <div class="t m0 xa h3 y15 ff2 fs1 fc1 sc0 ls0 ws1">R$ {{valor_total}}</div>
+                <div class="t m0 xa h3 y13 ff2 fs1 fc1 sc0 ls0 ws1">{{subtotal}}</div>
+                <div class="t m0 xa h3 y14 ff2 fs1 fc1 sc0 ls0">{{desconto}}</div>
+                <div class="t m0 xa h3 y15 ff2 fs1 fc1 sc0 ls0 ws1">{{valor_total}}</div>
                 <div class="t m0 xc h3 y16 ff2 fs1 fc1 sc0 ls0">SUBTOTAL:</div>
                 <div class="t m0 xd h3 y17 ff2 fs1 fc1 sc0 ls0">DESCONTO:</div>
                 <div class="t m0 xe h3 y18 ff2 fs1 fc1 sc0 ls0 ws1">VALOR TOTAL:</div>
                 <div class="t m0 xf h5 y19 ff3 fs1 fc1 sc0 ls0 ws0">PROJETO/SERVIÇO<span class="_"> </span><span
                         class="ff4 fs0 fc0 ws1 v1">RECIBO Nº: <span
                             class="receipt-number">{{numero_recibo}}</span></span></div>
-                <div class="t m0 x10 h6 y1a ff3 fs2 fc2 sc0 ls0 ws1">R$ {{valor_total}}</div>
+                <div class="t m0 x10 h6 y1a ff3 fs2 fc2 sc0 ls0 ws1">{{valor_total}}</div>
                 <div class="t m0 x2 h7 y1b ff2 fs3 fc1 sc0 ls0 ws1">TOTAL A PAGAR</div>
                 <div class="t m0 x2 h8 y1c intro-text">
                     Venda registrada através do ERP Lotus Core, desenvolvido exclusivamente para a Silks.<br>
@@ -1588,7 +1652,7 @@
                 <div class="t m0 x13 h4 y27 ff3 fs1 fc4 sc0 ls0 ws1">Qnm 8 Conj. P, Brasília, DF 71825-202 •
                     silksclothing.com</div>
                 <div class="t m0 xf h8 y28 ff3 fs3 fc1 sc0 ls0 ws1">Método: {{metodo_pagamento}}</div>
-                <div class="t m0 xf h8 y29 ff3 fs3 fc1 sc0 ls0 ws1">Entrada: R$ {{entrada}}</div>
+                <div class="t m0 xf h8 y29 ff3 fs3 fc1 sc0 ls0 ws1">Entrada: {{entrada}}</div>
                 <div class="t m0 xf h8 y2a ff3 fs3 fc1 sc0 ls0 ws1">Parcelamento: {{parcelamento}}</div>
                 <div class="t m0 xf h7 y2b ff2 fs3 fc1 sc0 ls0 ws1">Informações de Pagamento:</div>
                 <div class="t m0 xf h7 y2c ff2 fs3 fc1 sc0 ls0 ws1">Termos e Condições</div>
