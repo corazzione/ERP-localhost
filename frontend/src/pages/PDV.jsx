@@ -18,6 +18,7 @@ import ClientSelector from '../components/pdv/ClientSelector';
 import ClientBadge from '../components/pdv/ClientBadge';
 import ConfirmModal from '../components/ConfirmModal';
 import StoreDropdown from '../components/StoreDropdown';
+import MissingDataModal from '../components/MissingDataModal';
 
 function PDV() {
     const navigate = useNavigate();
@@ -37,6 +38,11 @@ function PDV() {
     const [descontoGlobal, setDescontoGlobal] = useState(0);
     const [acrescimo, setAcrescimo] = useState(0);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+    // Estado para dados faltantes do cliente (Recibo)
+    const [missingData, setMissingData] = useState(null);
+    const [showMissingDataModal, setShowMissingDataModal] = useState(false);
+    const [lastCompleteSale, setLastCompleteSale] = useState(null);
 
     // Theme colors
     const bgMain = isDark ? '#0f172a' : '#f8fafc';
@@ -193,16 +199,35 @@ function PDV() {
                 showToast(`Venda #${response.data.numero} realizada com sucesso!`, 'success');
             }
 
-            printReceipt({
-                ...response.data,
-                cliente: clienteSelecionado
-            });
+            // Tentar imprimir recibo
+            try {
+                await printReceipt({
+                    ...response.data,
+                    cliente: clienteSelecionado
+                });
+            } catch (error) {
+                console.error('Erro ao imprimir recibo no PDV:', error);
+                if (error.response?.status === 400 && error.response?.data?.faltando) {
+                    setLastCompleteSale({ ...response.data, cliente: clienteSelecionado });
+                    setMissingData({
+                        clienteId: error.response.data.clienteId,
+                        missingFields: error.response.data.faltando
+                    });
+                    setShowMissingDataModal(true);
+                    // Não limpar venda imediatamente se quisermos manter o contexto?
+                    // Mas a venda JÁ FOI CRIADA. O recibo é um passo pós-venda.
+                    // O modal de missing data vai permitir corrigir e re-emitir.
+                } else {
+                    showToast('Erro ao gerar recibo. Você pode tentar novamente na tela de Vendas.', 'error');
+                }
+            }
 
             limparVenda();
         } catch (error) {
             console.error('Erro ao finalizar venda:', error);
             showToast(error.response?.data?.error || 'Erro ao finalizar venda', 'error');
             playSound('error');
+            // Se erro for na criaçao da venda, não limpa
         } finally {
             setLoading(false);
         }
@@ -340,8 +365,44 @@ function PDV() {
     );
     console.log('Filtered Products:', produtosFiltrados.length);
 
+    // Debug Panel Component
+    const DebugPanel = () => (
+        <div style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            color: '#00ff00',
+            padding: '15px',
+            borderRadius: '8px',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            zIndex: 9999,
+            pointerEvents: 'none',
+            maxWidth: '300px'
+        }}>
+            <h3 style={{ margin: '0 0 10px 0', borderBottom: '1px solid #00ff00' }}>🛠️ PDV Debug Info</h3>
+            <div><strong>Store ID:</strong> {store || 'null'}</div>
+            <div><strong>Stores Loaded:</strong> {stores.length}</div>
+            <div><strong>Cart Items:</strong> {carrinho.length}</div>
+            <div><strong>Client:</strong> {clienteSelecionado?.nome || 'None'}</div>
+            <div><strong>Total:</strong> R$ {calcularTotal().toFixed(2)}</div>
+            <div style={{ marginTop: '10px', color: '#ffff00' }}>
+                Last Action: {window.lastAction || 'None'}
+            </div>
+        </div>
+    );
+
+    // Wrap setStore to log changes
+    const handleStoreChange = (newStore) => {
+        console.log('🏪 PDV: Changing store to:', newStore);
+        window.lastAction = `Set Store: ${newStore}`;
+        setStore(newStore);
+    };
+
     return (
         <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', backgroundColor: bgMain }}>
+            <DebugPanel />
             {/* Área Esquerda - Busca e Produtos */}
             <div style={{ flex: 1, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {/* Header PDV */}
@@ -356,7 +417,7 @@ function PDV() {
                         <StoreDropdown
                             stores={stores}
                             selectedStore={store}
-                            onChange={setStore}
+                            onChange={handleStoreChange}
                             onNewStore={() => { }} // Disable creation in PDV for simplicity or redirect
                             onManage={() => { }}   // Disable management in PDV
                         />
@@ -602,6 +663,21 @@ function PDV() {
                 title="Limpar Carrinho"
                 message="Tem certeza que deseja limpar todos os itens do carrinho? Esta ação não pode ser desfeita."
                 type="warning"
+            />
+
+            <MissingDataModal
+                isOpen={showMissingDataModal}
+                onClose={() => setShowMissingDataModal(false)}
+                missingFields={missingData?.missingFields}
+                clienteId={missingData?.clienteId}
+                onSuccess={() => {
+                    if (lastCompleteSale) {
+                        printReceipt(lastCompleteSale).catch(err => {
+                            console.error('Retry failed', err);
+                            showToast('Erro ao imprimir recibo mesmo após atualização.', 'error');
+                        });
+                    }
+                }}
             />
         </div>
     );
