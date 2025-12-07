@@ -1,0 +1,732 @@
+/* Stripe/Apple/Linear Design System - Refined v2 */
+
+:root {
+    /* Core Colors */
+    --bg-page: #F7F8FA;
+    --bg-card: #FFFFFF;
+    --border-color: #E3E5E8;
+    --text-primary: #1A1A1A;
+    --text-secondary: #6F6F6F;
+
+    /* Status Colors (Light Mode Defaults) */
+    --status-success-bg: #E6F7EC;
+    --status-success-text: #2ECC71;
+
+    --status-pending-bg: #FFF7D6;
+    --status-pending-text: #F1C40F;
+
+    --status-cancel-bg: #FDE2E2;
+    --status-cancel-text: #E74C3C;
+
+    --status-credit-bg: #F3E8FF;
+    /* Lilas suave light */
+    --status-credit-text: #A78BFA;
+
+    --status-budget-bg: #E0F2FE;
+    --status-budget-text: #3B82F6;
+
+    /* UI Dimensions */
+    --radius-card: 16px;
+    --radius-pill: 999px;
+
+    /* Shadows */
+    --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.04);
+    --shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* Global Layout */
+.sales-page-container {
+    background-color: var(--bg-page);
+    min-height: 100vh;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--text-primary);
+    padding: 32px;
+    transition: background-color 0.3s ease;
+}
+
+/* SECTION 1: KPI CARDS */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.sales-kpi-card {
+    background-color: var(--bg-card);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: var(--radius-card);
+    padding: 24px;
+    height: 120px;
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.sales-kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
+}
+
+.kpi-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.kpi-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.kpi-icon-wrapper {
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
+.kpi-content {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
+    line-height: 1;
+}
+
+.kpi-sparkline {
+    height: 30px;
+    width: 80px;
+    opacity: 0.9;
+}
+
+/* SECTION 2: ORDER OVERVIEW */
+.order-overview-container {
+    background-color: var(--bg-card);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: var(--radius-card);
+    padding: 24px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-soft);
+}
+
+.overview-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+}
+
+.status-bar-container {
+    height: 24px;
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    display: flex;
+    width: 100%;
+    margin-bottom: 20px;
+    background-color: #F3F4F6;
+}
+
+.status-bar-segment {
+    height: 100%;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    position: relative;
+}
+
+.status-bar-segment:hover {
+    opacity: 0.9;
+}
+
+.overview-legend {
+    display: flex;
+    gap: 32px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.legend-item:hover {
+    color: var(--text-primary);
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+/* SECTION 3: FILTERS */
+.filter-toggle-btn {
+    height: 48px;
+    padding: 0 24px;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-pill);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    transition: all 0.2s;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.filter-toggle-btn:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+}
+
+.filter-panel {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
+    padding: 32px;
+    margin-top: 16px;
+    box-shadow: var(--shadow-soft);
+    animation: slideDown 0.2s ease-out;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.filter-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-input,
+.filter-select {
+    width: 100%;
+    height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background-color: #FFFFFF;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+    outline: none;
+    border-color: var(--status-credit-text);
+    box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.15);
+}
+
+/* SECTION 4: TABLE */
+.sales-table-container {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    margin-top: 32px;
+    box-shadow: var(--shadow-soft);
+}
+
+.sales-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sales-table thead th {
+    background-color: var(--bg-card);
+    padding: 20px 32px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.sales-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+}
+
+.sales-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.sales-table tbody tr:hover {
+    background-color: #FAFAFA;
+}
+
+.sales-table td {
+    padding: 20px 32px;
+    font-size: 14px;
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+
+/* Status Badges - Refined v2 */
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 12px;
+    /* Smaller padding */
+    border-radius: 16px;
+    /* Requested radius */
+    font-size: 12px;
+    font-weight: 500;
+    /* Requested weight */
+    min-width: 80px;
+    /* Slightly smaller min-width */
+    transition: all 0.2s;
+}
+
+.status-chip.concluida {
+    background-color: var(--status-success-bg);
+    color: var(--status-success-text);
+}
+
+.status-chip.pendente {
+    background-color: var(--status-pending-bg);
+    color: var(--status-pending-text);
+}
+
+.status-chip.cancelada {
+    background-color: var(--status-cancel-bg);
+    color: var(--status-cancel-text);
+}
+
+.status-chip.crediario {
+    background-color: var(--status-credit-bg);
+    color: var(--status-credit-text);
+}
+
+.status-chip.orcamento {
+    background-color: var(--status-budget-bg);
+    color: var(--status-budget-text);
+}
+
+/* Circular Actions */
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    margin-left: 4px;
+}
+
+.action-btn:hover {
+    background-color: #F3F4F6;
+    border-color: #E5E7EB;
+    color: #8B5CF6;
+    /* Purple hover */
+    transform: scale(1.05);
+}
+
+/* SECTION 5: PAGINATION */
+.pagination-container {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin-top: 24px;
+    padding-bottom: 40px;
+}
+
+.pagination-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.pagination-btn:hover:not(:disabled) {
+    border-color: var(--status-credit-text);
+    color: var(--status-credit-text);
+}
+
+.pagination-btn.active {
+    background-color: var(--status-credit-text);
+    color: white;
+    border-color: var(--status-credit-text);
+    font-weight: 600;
+}
+
+/* MODAL STYLES */
+.modal-header-custom {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.modal-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modal-title-icon {
+    color: var(--text-secondary);
+}
+
+.modal-title-text {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.modal-products-box {
+    background-color: #F9FAFB;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background-color: #FFFFFF;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+    outline: none;
+    border-color: var(--status-credit-text);
+    box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.15);
+}
+
+/* SECTION 4: TABLE */
+.sales-table-container {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    margin-top: 32px;
+    box-shadow: var(--shadow-soft);
+}
+
+.sales-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sales-table thead th {
+    background-color: var(--bg-card);
+    padding: 20px 32px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.sales-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+}
+
+.sales-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.sales-table tbody tr:hover {
+    background-color: #FAFAFA;
+}
+
+.sales-table td {
+    padding: 20px 32px;
+    font-size: 14px;
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+
+/* Status Badges - Refined v2 */
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 12px;
+    /* Smaller padding */
+    border-radius: 16px;
+    /* Requested radius */
+    font-size: 12px;
+    font-weight: 500;
+    /* Requested weight */
+    min-width: 80px;
+    /* Slightly smaller min-width */
+    transition: all 0.2s;
+}
+
+.status-chip.concluida {
+    background-color: var(--status-success-bg);
+    color: var(--status-success-text);
+}
+
+.status-chip.pendente {
+    background-color: var(--status-pending-bg);
+    color: var(--status-pending-text);
+}
+
+.status-chip.cancelada {
+    background-color: var(--status-cancel-bg);
+    color: var(--status-cancel-text);
+}
+
+.status-chip.crediario {
+    background-color: var(--status-credit-bg);
+    color: var(--status-credit-text);
+}
+
+.status-chip.orcamento {
+    background-color: var(--status-budget-bg);
+    color: var(--status-budget-text);
+}
+
+/* Circular Actions */
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    margin-left: 4px;
+}
+
+.action-btn:hover {
+    background-color: #F3F4F6;
+    border-color: #E5E7EB;
+    color: #8B5CF6;
+    /* Purple hover */
+    transform: scale(1.05);
+}
+
+/* SECTION 5: PAGINATION */
+.pagination-container {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin-top: 24px;
+    padding-bottom: 40px;
+}
+
+.pagination-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.pagination-btn:hover:not(:disabled) {
+    border-color: var(--status-credit-text);
+    color: var(--status-credit-text);
+}
+
+.pagination-btn.active {
+    background-color: var(--status-credit-text);
+    color: white;
+    border-color: var(--status-credit-text);
+    font-weight: 600;
+}
+
+/* MODAL STYLES */
+.modal-header-custom {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.modal-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modal-title-icon {
+    color: var(--text-secondary);
+}
+
+.modal-title-text {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.modal-products-box {
+    background-color: #F9FAFB;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 24px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.01);
+}
+
+.modal-products-table th {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 600;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.modal-products-table td {
+    padding: 12px 0;
+    border-bottom: 1px solid #F3F4F6;
+    font-size: 14px;
+}
+
+.modal-products-table tr:last-child td {
+    border-bottom: none;
+}
+
+.modal-footer-total {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* DARK MODE OVERRIDES */
+@media (prefers-color-scheme: dark) {
+    :root.dark {
+        /* Core Colors */
+        --bg-page: #0E1624;
+        /* Requested Dark Background */
+        --bg-card: #181818;
+        /* Keep card slightly lighter than page or match if needed, using standard dark card */
+        --border-color: rgba(255, 255, 255, 0.06);
+        /* Requested Border */
+        --text-primary: #E6E6E6;
+        /* Requested Text Default */
+        --text-secondary: #888888;
+
+        /* Status Colors (Dark Mode) */
+        --status-success-bg: #1B3A28;
+        --status-success-text: #78FFB3;
+
+        --status-pending-bg: #4A3A12;
+        --status-pending-text: #FFE17A;
+
+        --status-cancel-bg: #552020;
+        --status-cancel-text: #FF9A9A;
+
+        --status-credit-bg: rgba(167, 139, 250, 0.15);
+        --status-credit-text: #A78BFA;
+
+        --status-budget-bg: rgba(59, 130, 246, 0.15);
+        --status-budget-text: #60A5FA;
+    }
+}
+
+/* Dark Mode Specifics */
+.dark .sales-table th {
+    background-color: #1f2937;
+    color: #9ca3af;
+    border-bottom-color: #374151;
+}
+
+.dark .sales-table td {
+    border-bottom-color: #374151;
+    color: #e5e7eb;
+}
+
+.dark .sales-table tr:hover td {
+    background-color: #374151;
+    /* Darker hover */
+}
+
+.dark .sales-table tr.selected td {
+    background-color: rgba(59, 130, 246, 0.15);
+    /* Blue tint for selection */
+}
+
+.dark .modal-products-box {
+    background-color: #1f2937;
+    border-color: #374151;
+}
+
+.dark .modal-products-table th {
+    color: #9ca3af;
+    border-bottom-color: #374151;
+}
+
+.dark .modal-products-table td {
+    border-bottom-color: #374151;
+    color: #e5e7eb;
+}
+
+.dark .modal-footer-total {
+    color: #ffffff;
+}
+
+.dark .filter-input,
+.dark .filter-select {
+    background-color: #1A1A1A;
+    border-color: var(--border-color);
+    color: #E6E6E6;
+}
+
+.dark .status-bar-container {
+    background-color: rgba(255, 255, 255, 0.05);
+}

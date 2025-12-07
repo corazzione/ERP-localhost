@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            margin: 0;
+            size: 80mm auto;
+            /* Largura de impressora térmica */
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            /* Fonte monoespaçada clássica de recibo */
+            font-size: 12px;
+            line-height: 1.2;
+            margin: 0;
+            padding: 10px;
+            width: 80mm;
+            box-sizing: border-box;
+            background-color: #fff;
+            color: #000;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 1px dashed #000;
+            padding-bottom: 10px;
+        }
+
+        .header h1 {
+            font-size: 16px;
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+        }
+
+        .header p {
+            margin: 2px 0;
+            font-size: 11px;
+        }
+
+        .info-group {
+            margin-bottom: 10px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+        }
+
+        .label {
+            font-weight: bold;
+        }
+
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 10px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        th {
+            text-align: left;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+            font-size: 11px;
+        }
+
+        td {
+            padding: 5px 0;
+            vertical-align: top;
+        }
+
+        .col-desc {
+            width: 50%;
+        }
+
+        .col-qtd {
+            width: 15%;
+            text-align: center;
+        }
+
+        .col-price {
+            width: 35%;
+            text-align: right;
+        }
+
+        .totals {
+            margin-top: 10px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+        }
+
+        .final-total {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 5px;
+            border-top: 1px solid #000;
+            padding-top: 5px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 10px;
+        }
+
+        .barcode {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 10px;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>{{loja.nome}}</h1>
+        {{#if loja.endereco}}<p>{{loja.endereco}}</p>{{/if}}
+        {{#if loja.telefone}}<p>Tel: {{loja.telefone}}</p>{{/if}}
+        <p>CNPJ: {{loja.cnpj}}</p>
+    </div>
+
+    <div class="info-group">
+        <div class="info-row">
+            <span class="label">RECIBO Nº:</span>
+            <span>{{numero}}</span>
+        </div>
+        <div class="info-row">
+            <span class="label">DATA:</span>
+            <span>{{dataVenda}}</span>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="info-group">
+        <div class="info-row">
+            <span class="label">CLIENTE:</span>
+            <span>{{cliente.nome}}</span>
+        </div>
+        {{#if cliente.cpfCnpj}}
+        <div class="info-row">
+            <span class="label">CPF/CNPJ:</span>
+            <span>{{cliente.cpfCnpj}}</span>
+        </div>
+        {{/if}}
+    </div>
+
+    <div class="divider"></div>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="col-desc">ITEM</th>
+                <th class="col-qtd">QTD</th>
+                <th class="col-price">TOTAL</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each itens}}
+            <tr>
+                <td class="col-desc">
+                    {{produto.nome}}
+                    {{#if descricao}}<br><small>{{descricao}}</small>{{/if}}
+                </td>
+                <td class="col-qtd">{{quantidade}}</td>
+                <td class="col-price">R$ {{subtotal}}</td>
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+
+    <div class="divider"></div>
+
+    <div class="totals">
+        <div class="total-row">
+            <span>SUBTOTAL:</span>
+            <span>R$ {{subtotal}}</span>
+        </div>
+        {{#if desconto}}
+        <div class="total-row">
+            <span>DESCONTO:</span>
+            <span>- R$ {{desconto}}</span>
+        </div>
+        {{/if}}
+        <div class="total-row final-total">
+            <span>TOTAL A PAGAR:</span>
+            <span>R$ {{total}}</span>
+        </div>
+        <div class="total-row" style="margin-top: 10px;">
+            <span>FORMA PAGAMENTO:</span>
+            <span>{{formaPagamento}}</span>
+        </div>
+        {{#if troco}}
+        <div class="total-row">
+            <span>TROCO:</span>
+            <span>R$ {{troco}}</span>
+        </div>
+        {{/if}}
+    </div>
+
+    {{#if observacoes}}
+    <div class="divider"></div>
+    <div class="info-group">
+        <span class="label">OBSERVAÇÕES:</span>
+        <p style="margin-top: 2px;">{{observacoes}}</p>
+    </div>
+    {{/if}}
+
+    <div class="footer">
+        <p>Obrigado pela preferência!</p>
+        <p>Volte sempre!</p>
+        <div class="barcode">
+            ||||||||||||||||||||||||||||||||
+            <br>
+            {{numero}}
+        </div>
+    </div>
+</body>
+
+</html>

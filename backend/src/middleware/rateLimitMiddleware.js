@@ -3,8 +3,8 @@ import { CONFIG } from '../constants.js';
 
 // Rate limiter global
 export const globalLimiter = rateLimit({
-    windowMs: CONFIG.RATE_LIMIT.WINDOW_MS,
-    max: CONFIG.RATE_LIMIT.MAX_REQUESTS,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 1000, // Limit each IP to 1000 requests per windowMs (Increased for dev)
     message: 'Muitas requisições. Tente novamente em alguns minutos.',
     standardHeaders: true,
     legacyHeaders: false
@@ -12,8 +12,8 @@ export const globalLimiter = rateLimit({
 
 // Rate limiter específico para login
 export const loginLimiter = rateLimit({
-    windowMs: CONFIG.RATE_LIMIT.WINDOW_MS,
-    max: CONFIG.RATE_LIMIT.LOGIN_MAX,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
     message: 'Muitas tentativas de login. Tente novamente em 15 minutos.',
     skipSuccessfulRequests: true
 });

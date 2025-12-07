@@ -1,316 +1,330 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import InvoiceService from '../services/InvoiceService';
 import { useToast } from '../components/Toast';
-import Modal from '../components/Modal';
-import printReceipt from '../utils/printReceipt';
-import { exportVendasCSV } from '../utils/exportCSV';
+import MissingDataModal from '../components/MissingDataModal';
+import SalesKPIs from '../components/vendas/SalesKPIs';
+import OrderOverview from '../components/vendas/OrderOverview';
+import SalesFilters from '../components/vendas/SalesFilters';
+import SaleDetailsModal from '../components/vendas/SaleDetailsModal';
+import {
+    Eye,
+    Download,
+    Send,
+    ChevronLeft,
+    ChevronRight,
+    Package
+} from 'lucide-react';
+import '../components/vendas/Sales.css';
+
+import { devLog } from '../utils/logger';
+import { getStatusLabel, getStatusClass, getFormaPagamentoLabel, formatCurrency, formatDateShort } from '../utils/formatters';
 
 function Vendas() {
     const navigate = useNavigate();
     const { showToast } = useToast();
 
+    // Estados de Dados
     const [vendas, setVendas] = useState([]);
+    const [kpis, setKpis] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [selectedVenda, setSelectedVenda] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
-    // Filtros
-    const [filtros, setFiltros] = useState({
-        dataInicio: '',
-        dataFim: '',
-        clienteId: '',
-        status: '',
-        formaPagamento: '',
-        numeroVenda: ''
+    const [loadingKPIs, setLoadingKPIs] = useState(true);
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 1
     });
 
-    const [clientes, setClientes] = useState([]);
+    // Estados de Filtros
+    const [filtros, setFiltros] = useState({
+        lojaId: '',
+        dataInicio: '',
+        dataFim: '',
+        status: '',
+        formaPagamento: '',
+        clienteId: '',
+        numero: ''
+    });
+    const [showFilters, setShowFilters] = useState(false);
 
+    // Estados de Seleção e Modal
+    const [selectedVenda, setSelectedVenda] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [loadingDetails, setLoadingDetails] = useState(false);
+
+    // Estado para dados faltantes do cliente
+    const [missingData, setMissingData] = useState(null);
+    const [showMissingDataModal, setShowMissingDataModal] = useState(false);
+
+    // Dados Auxiliares
+    const [clientes, setClientes] = useState([]);
+    const [lojas, setLojas] = useState([]);
+
+    // Carregar dados auxiliares
     useEffect(() => {
-        carregarDados();
+        const loadAuxData = async () => {
+            try {
+                const [clientesRes, lojasRes] = await Promise.all([
+                    api.get('/clientes'),
+                    api.get('/stores')
+                ]);
+                setClientes(clientesRes.data.data || clientesRes.data || []);
+                setLojas(lojasRes.data || []);
+            } catch (error) {
+                console.error('Erro ao carregar dados auxiliares', error);
+            }
+        };
+        loadAuxData();
     }, []);
 
-    const carregarDados = async () => {
+    // Carregar KPIs
+    const carregarKPIs = useCallback(async () => {
+        setLoadingKPIs(true);
         try {
-            const [vendasRes, clientesRes] = await Promise.all([
-                api.get('/vendas'),
-                api.get('/clientes')
-            ]);
-            // Ambos endpoints podem retornar { data: [], pagination: {} }
-            setVendas(vendasRes.data.data || vendasRes.data);
-            setClientes(clientesRes.data.data || clientesRes.data);
+            const params = { ...filtros };
+            Object.keys(params).forEach(key => {
+                if (params[key] === '' || params[key] === null) {
+                    delete params[key];
+                }
+            });
+
+            const response = await api.get('/vendas/kpis', { params });
+            setKpis(response.data);
         } catch (error) {
-            showToast('Erro ao carregar dados', 'error');
+            console.error('Erro ao carregar KPIs:', error);
+        } finally {
+            setLoadingKPIs(false);
+        }
+    }, [filtros]);
+
+    // Carregar vendas
+    const carregarVendas = useCallback(async () => {
+        setLoading(true);
+        try {
+            const params = {
+                page: pagination.page,
+                limit: pagination.limit,
+                ...filtros
+            };
+
+            Object.keys(params).forEach(key => {
+                if (params[key] === '' || params[key] === null) {
+                    delete params[key];
+                }
+            });
+
+            devLog('🚀 Enviando para API /vendas com params:', params);
+
+            const response = await api.get('/vendas', { params });
+
+            if (response.data.pagination) {
+                setVendas(response.data.data);
+                setPagination(prev => ({ ...prev, ...response.data.pagination }));
+            } else {
+                setVendas(response.data);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar vendas:', error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [pagination.page, pagination.limit, filtros]);
 
-    const aplicarFiltros = () => {
-        let resultado = [...vendas];
+    useEffect(() => {
+        carregarVendas();
+        carregarKPIs();
+    }, [carregarVendas, carregarKPIs]);
 
-        if (filtros.numeroVenda) {
-            resultado = resultado.filter(v =>
-                v.numero.toLowerCase().includes(filtros.numeroVenda.toLowerCase())
-            );
-        }
-
-        if (filtros.clienteId) {
-            resultado = resultado.filter(v => v.clienteId === filtros.clienteId);
-        }
-
-        if (filtros.status) {
-            resultado = resultado.filter(v => v.status === filtros.status);
-        }
-
-        if (filtros.formaPagamento) {
-            resultado = resultado.filter(v => v.formaPagamento === filtros.formaPagamento);
-        }
-
-        if (filtros.dataInicio) {
-            resultado = resultado.filter(v =>
-                new Date(v.dataVenda) >= new Date(filtros.dataInicio)
-            );
-        }
-
-        if (filtros.dataFim) {
-            resultado = resultado.filter(v =>
-                new Date(v.dataVenda) <= new Date(filtros.dataFim)
-            );
-        }
-
-        return resultado;
+    // Handlers
+    const handleFilterChange = (e) => {
+        const { name, value } = e.target;
+        devLog('🎯 Filter Changed:', { name, value, type: typeof value });
+        setFiltros(prev => {
+            const newFiltros = { ...prev, [name]: value };
+            devLog('📦 New Filtros State:', newFiltros);
+            return newFiltros;
+        });
+        setPagination(prev => ({ ...prev, page: 1 }));
     };
 
     const limparFiltros = () => {
         setFiltros({
+            lojaId: '',
             dataInicio: '',
             dataFim: '',
-            clienteId: '',
             status: '',
             formaPagamento: '',
-            numeroVenda: ''
+            clienteId: '',
+            numero: ''
         });
+        setPagination(prev => ({ ...prev, page: 1 }));
     };
 
-    const abrirDetalhes = async (vendaId) => {
+    const handleStatusFilter = useCallback((status) => {
+        setFiltros(prev => ({ ...prev, status }));
+        setPagination(prev => ({ ...prev, page: 1 }));
+    }, []);
+
+    const handlePageChange = useCallback((newPage) => {
+        setPagination(prev => {
+            if (newPage >= 1 && newPage <= prev.totalPages) {
+                return { ...prev, page: newPage };
+            }
+            return prev;
+        });
+    }, []);
+
+    const abrirDetalhes = useCallback(async (vendaId) => {
+        // 1. Tentar encontrar nos dados locais primeiro para abrir rápido
+        const vendaLocal = vendas.find(v => v.id === vendaId);
+        if (vendaLocal) {
+            setSelectedVenda(vendaLocal);
+            setIsModalOpen(true);
+        }
+
+        // 2. Buscar dados completos em background (itens, etc podem não estar na lista)
+        setLoadingDetails(true);
         try {
             const response = await api.get(`/vendas/${vendaId}`);
             setSelectedVenda(response.data);
-            setIsModalOpen(true);
+            if (!vendaLocal) setIsModalOpen(true); // Se não tinha local, abre agora
         } catch (error) {
-            showToast('Erro ao carregar detalhes', 'error');
+            showToast('Erro ao carregar detalhes da venda', 'error');
+            if (!vendaLocal) setIsModalOpen(false);
+        } finally {
+            setLoadingDetails(false);
         }
-    };
+    }, [vendas, showToast]);
 
-    const exportarExcel = () => {
-        const vendasFiltradas = aplicarFiltros();
-        exportVendasCSV(vendasFiltradas);
-        showToast('Vendas exportadas com sucesso', 'success');
-    };
+    const handleDownloadPDF = useCallback(async (vendaId) => {
+        try {
+            showToast('Gerando PDF...', 'info');
+            await InvoiceService.downloadInvoice(vendaId);
+            showToast('PDF baixado com sucesso', 'success');
+        } catch (error) {
+            devLog('Erro ao baixar PDF:', error);
+            if (error.response?.status === 400 && error.response?.data?.faltando) {
+                setMissingData({
+                    vendaId: vendaId,
+                    clienteId: error.response.data.clienteId,
+                    missingFields: error.response.data.faltando
+                });
+                setShowMissingDataModal(true);
+            } else {
+                showToast('Erro ao baixar PDF', 'error');
+            }
+        }
+    }, [showToast]);
 
-    const vendasFiltradas = aplicarFiltros();
+    const handleWhatsAppShare = useCallback((venda) => {
+        const telefone = venda.cliente?.telefone?.replace(/\D/g, '');
+        if (!telefone) {
+            showToast('Cliente sem telefone cadastrado', 'warning');
+            return;
+        }
 
-    const getStatusBadge = (status) => {
-        const badges = {
-            'pago': 'badge-positive',
-            'pendente': 'badge-warning',
-            'cancelado': 'badge-negative'
-        };
-        return badges[status] || 'badge-neutral';
-    };
+        const data = formatDateShort(venda.dataVenda);
+        const total = formatCurrency(venda.total);
+        const mensagem = `Olá ${venda.cliente.nome}, aqui está o resumo da sua compra #${venda.numero} realizada em ${data}. Total: ${total}.`;
 
-    const getFormaPagamentoLabel = (forma) => {
-        const labels = {
-            'dinheiro': '💵 Dinheiro',
-            'cartao_credito': '💳 Crédito',
-            'cartao_debito': '💳 Débito',
-            'pix': '📱 PIX',
-            'crediario': '💰 Crediário'
-        };
-        return labels[forma] || forma;
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center p-8">
-                <div className="text-center">
-                    <div className="spinner"></div>
-                    <p className="mt-4">Carregando vendas...</p>
-                </div>
-            </div>
-        );
-    }
+        const link = `https://wa.me/55${telefone}?text=${encodeURIComponent(mensagem)}`;
+        window.open(link, '_blank');
+    }, [showToast]);
 
     return (
-        <div>
-            <div className="page-header">
-                <div>
-                    <h1 className="page-title">📊 Histórico de Vendas</h1>
-                    <p style={{ color: 'var(--color-neutral-500)' }}>
-                        Consulta e análise de vendas realizadas
-                    </p>
-                </div>
-                <button className="btn btn-primary" onClick={exportarExcel}>
-                    📥 Exportar Excel
-                </button>
-            </div>
+        <div className="sales-page-container">
+            {/* 1. KPI Cards */}
+            <SalesKPIs kpis={kpis} loading={loadingKPIs} />
 
-            {/* Filtros */}
-            <div className="card mb-6">
-                <h3 className="mb-4">🔍 Filtros</h3>
-                <div className="grid grid-cols-4 gap-4">
-                    <div className="form-group">
-                        <label className="label">Número da Venda</label>
-                        <input
-                            type="text"
-                            className="input"
-                            placeholder="VND-001"
-                            value={filtros.numeroVenda}
-                            onChange={(e) => setFiltros({ ...filtros, numeroVenda: e.target.value })}
-                        />
-                    </div>
+            {/* 2. Order Overview */}
+            <OrderOverview
+                statusBreakdown={kpis?.statusBreakdown}
+                onStatusFilter={handleStatusFilter}
+                loading={loadingKPIs}
+            />
 
-                    <div className="form-group">
-                        <label className="label">Cliente</label>
-                        <select
-                            className="select"
-                            value={filtros.clienteId}
-                            onChange={(e) => setFiltros({ ...filtros, clienteId: e.target.value })}
-                        >
-                            <option value="">Todos</option>
-                            {clientes.map(c => (
-                                <option key={c.id} value={c.id}>{c.nome}</option>
-                            ))}
-                        </select>
-                    </div>
+            {/* 3. Filters */}
+            <SalesFilters
+                filtros={filtros}
+                onFilterChange={handleFilterChange}
+                onClearFilters={limparFiltros}
+                clientes={clientes}
+                lojas={lojas}
+                isOpen={showFilters}
+                onToggle={() => setShowFilters(!showFilters)}
+            />
 
-                    <div className="form-group">
-                        <label className="label">Status</label>
-                        <select
-                            className="select"
-                            value={filtros.status}
-                            onChange={(e) => setFiltros({ ...filtros, status: e.target.value })}
-                        >
-                            <option value="">Todos</option>
-                            <option value="pago">Pago</option>
-                            <option value="pendente">Pendente</option>
-                            <option value="cancelado">Cancelado</option>
-                        </select>
-                    </div>
-
-                    <div className="form-group">
-                        <label className="label">Forma Pagamento</label>
-                        <select
-                            className="select"
-                            value={filtros.formaPagamento}
-                            onChange={(e) => setFiltros({ ...filtros, formaPagamento: e.target.value })}
-                        >
-                            <option value="">Todas</option>
-                            <option value="dinheiro">Dinheiro</option>
-                            <option value="cartao_credito">Cartão Crédito</option>
-                            <option value="cartao_debito">Cartão Débito</option>
-                            <option value="pix">PIX</option>
-                            <option value="crediario">Crediário</option>
-                        </select>
-                    </div>
-
-                    <div className="form-group">
-                        <label className="label">Data Início</label>
-                        <input
-                            type="date"
-                            className="input"
-                            value={filtros.dataInicio}
-                            onChange={(e) => setFiltros({ ...filtros, dataInicio: e.target.value })}
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label className="label">Data Fim</label>
-                        <input
-                            type="date"
-                            className="input"
-                            value={filtros.dataFim}
-                            onChange={(e) => setFiltros({ ...filtros, dataFim: e.target.value })}
-                        />
-                    </div>
-
-                    <div className="flex items-end gap-2">
-                        <button className="btn btn-outline" onClick={limparFiltros}>
-                            Limpar
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Resumo */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="card">
-                    <div className="text-sm text-neutral-500">Total de Vendas</div>
-                    <div className="text-2xl font-bold">{vendasFiltradas.length}</div>
-                </div>
-                <div className="card">
-                    <div className="text-sm text-neutral-500">Valor Total</div>
-                    <div className="text-2xl font-bold text-positive">
-                        R$ {vendasFiltradas.reduce((acc, v) => acc + parseFloat(v.total), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </div>
-                </div>
-                <div className="card">
-                    <div className="text-sm text-neutral-500">Ticket Médio</div>
-                    <div className="text-2xl font-bold text-primary">
-                        R$ {vendasFiltradas.length > 0
-                            ? (vendasFiltradas.reduce((acc, v) => acc + parseFloat(v.total), 0) / vendasFiltradas.length).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-                            : '0,00'
-                        }
-                    </div>
-                </div>
-            </div>
-
-            {/* Tabela */}
-            <div className="card">
-                <table className="table">
+            {/* 4. Table */}
+            <div className="sales-table-container">
+                <table className="sales-table">
                     <thead>
                         <tr>
-                            <th>Número</th>
+                            <th>Nº Venda</th>
                             <th>Data</th>
                             <th>Cliente</th>
-                            <th>Total</th>
-                            <th>Forma Pagamento</th>
+                            <th>Loja</th>
+                            <th>Pagamento</th>
                             <th>Status</th>
-                            <th>Ações</th>
+                            <th>Total</th>
+                            <th className="text-right">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {vendasFiltradas.length === 0 ? (
+                        {loading ? (
+                            Array.from({ length: 5 }).map((_, i) => (
+                                <tr key={i}>
+                                    <td colSpan="8" className="px-6 py-4">
+                                        <div className="h-4 bg-gray-200 rounded w-full animate-pulse"></div>
+                                    </td>
+                                </tr>
+                            ))
+                        ) : vendas.length === 0 ? (
                             <tr>
-                                <td colSpan="7" className="text-center py-8 text-neutral-500">
-                                    Nenhuma venda encontrada
+                                <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
+                                    <Package size={32} className="mx-auto mb-2 opacity-50" />
+                                    Nenhuma venda encontrada.
                                 </td>
                             </tr>
                         ) : (
-                            vendasFiltradas.map(venda => (
-                                <tr key={venda.id} className="hover:bg-neutral-50 cursor-pointer" onClick={() => abrirDetalhes(venda.id)}>
-                                    <td className="font-semibold">{venda.numero}</td>
+                            vendas.map((venda) => (
+                                <tr key={venda.id}>
+                                    <td className="font-semibold">#{venda.numero}</td>
                                     <td>{new Date(venda.dataVenda).toLocaleDateString('pt-BR')}</td>
-                                    <td>{venda.cliente?.nome || '🛒 Balcão'}</td>
-                                    <td className="font-semibold">R$ {parseFloat(venda.total).toFixed(2)}</td>
+                                    <td>{venda.cliente?.nome || 'Cliente Balcão'}</td>
+                                    <td>{venda.loja?.nome || 'Loja Principal'}</td>
                                     <td>{getFormaPagamentoLabel(venda.formaPagamento)}</td>
                                     <td>
-                                        <span className={`badge ${getStatusBadge(venda.status)}`}>
-                                            {venda.status}
+                                        <span className={`status-chip ${getStatusClass(venda.status)}`}>
+                                            {getStatusLabel(venda.status)}
                                         </span>
                                     </td>
-                                    <td>
-                                        <button
-                                            className="btn btn-sm btn-outline"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                abrirDetalhes(venda.id);
-                                            }}
-                                        >
-                                            Ver Detalhes
-                                        </button>
+                                    <td className="font-bold">R$ {parseFloat(venda.total).toFixed(2)}</td>
+                                    <td className="text-right">
+                                        <div className="flex justify-end items-center">
+                                            <button
+                                                className="action-btn"
+                                                title="Ver Detalhes"
+                                                onClick={() => abrirDetalhes(venda.id)}
+                                            >
+                                                <Eye size={18} />
+                                            </button>
+                                            <button
+                                                className="action-btn"
+                                                title="Baixar PDF"
+                                                onClick={() => handleDownloadPDF(venda.id)}
+                                            >
+                                                <Download size={18} />
+                                            </button>
+                                            <button
+                                                className="action-btn"
+                                                title="Enviar WhatsApp"
+                                                onClick={() => handleWhatsAppShare(venda)}
+                                            >
+                                                <Send size={18} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))
@@ -319,99 +333,54 @@ function Vendas() {
                 </table>
             </div>
 
-            {/* Modal de Detalhes */}
-            <Modal
+            {/* 5. Pagination */}
+            {!loading && vendas.length > 0 && (
+                <div className="pagination-container">
+                    <button
+                        className="pagination-btn"
+                        disabled={pagination.page === 1}
+                        onClick={() => handlePageChange(pagination.page - 1)}
+                    >
+                        <ChevronLeft size={18} />
+                    </button>
+
+                    {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                            key={page}
+                            className={`pagination-btn ${pagination.page === page ? 'active' : ''}`}
+                            onClick={() => handlePageChange(page)}
+                        >
+                            {page}
+                        </button>
+                    ))}
+
+                    <button
+                        className="pagination-btn"
+                        disabled={pagination.page === pagination.totalPages}
+                        onClick={() => handlePageChange(pagination.page + 1)}
+                    >
+                        <ChevronRight size={18} />
+                    </button>
+                </div>
+            )}
+
+            {/* Sale Details Modal - Premium Design */}
+            <SaleDetailsModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={selectedVenda ? `Venda ${selectedVenda.numero}` : 'Detalhes da Venda'}
-                size="large"
-            >
-                {selectedVenda && (
-                    <div className="space-y-4">
-                        {/* Informações Gerais */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <strong className="text-sm text-neutral-500">Data:</strong>
-                                <p>{new Date(selectedVenda.dataVenda).toLocaleString('pt-BR')}</p>
-                            </div>
-                            <div>
-                                <strong className="text-sm text-neutral-500">Cliente:</strong>
-                                <p>{selectedVenda.cliente?.nome || '🛒 Balcão'}</p>
-                            </div>
-                            <div>
-                                <strong className="text-sm text-neutral-500">Forma de Pagamento:</strong>
-                                <p>{getFormaPagamentoLabel(selectedVenda.formaPagamento)}</p>
-                            </div>
-                            <div>
-                                <strong className="text-sm text-neutral-500">Status:</strong>
-                                <span className={`badge ${getStatusBadge(selectedVenda.status)}`}>
-                                    {selectedVenda.status}
-                                </span>
-                            </div>
-                        </div>
+                venda={selectedVenda}
+                onDownloadPDF={handleDownloadPDF}
+                onWhatsAppShare={handleWhatsAppShare}
+                loading={loadingDetails}
+            />
 
-                        {/* Itens */}
-                        <div>
-                            <h4 className="font-semibold mb-2">Itens da Venda</h4>
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th>Produto</th>
-                                        <th>Quantidade</th>
-                                        <th>Preço Unit.</th>
-                                        <th>Subtotal</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {selectedVenda.itens?.map((item, idx) => (
-                                        <tr key={idx}>
-                                            <td>{item.produto?.nome || item.descricao || 'Item Personalizado'}</td>
-                                            <td>{item.quantidade}</td>
-                                            <td>R$ {parseFloat(item.precoUnit).toFixed(2)}</td>
-                                            <td>R$ {parseFloat(item.subtotal).toFixed(2)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Totais */}
-                        <div className="border-t pt-4">
-                            <div className="flex justify-between mb-2">
-                                <span>Subtotal:</span>
-                                <strong>R$ {parseFloat(selectedVenda.subtotal || 0).toFixed(2)}</strong>
-                            </div>
-                            {selectedVenda.desconto > 0 && (
-                                <div className="flex justify-between mb-2 text-warning">
-                                    <span>Desconto:</span>
-                                    <strong>- R$ {parseFloat(selectedVenda.desconto).toFixed(2)}</strong>
-                                </div>
-                            )}
-                            <div className="flex justify-between text-xl font-bold">
-                                <span>Total:</span>
-                                <strong className="text-positive">R$ {parseFloat(selectedVenda.total).toFixed(2)}</strong>
-                            </div>
-                        </div>
-
-                        {selectedVenda.observacoes && (
-                            <div className="bg-neutral-50 p-3 rounded">
-                                <strong className="text-sm text-neutral-500">Observações:</strong>
-                                <p>{selectedVenda.observacoes}</p>
-                            </div>
-                        )}
-
-                        {/* Botão Imprimir */}
-                        <div className="mt-6 pt-4 border-t flex justify-end">
-                            <button
-                                className="btn btn-primary"
-                                onClick={() => printReceipt(selectedVenda)}
-                            >
-                                🖨️ Imprimir Recibo
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </Modal>
+            <MissingDataModal
+                isOpen={showMissingDataModal}
+                onClose={() => setShowMissingDataModal(false)}
+                missingFields={missingData?.missingFields}
+                clienteId={missingData?.clienteId}
+                onSuccess={() => handleDownloadPDF(missingData.vendaId)}
+            />
         </div>
     );
 }

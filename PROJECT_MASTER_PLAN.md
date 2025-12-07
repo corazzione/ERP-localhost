@@ -186,23 +186,17 @@ ERP localhost/
 - ✅ Cálculo de troco
 - ✅ Validação de estoque disponível
 
-**⚠️ IMPORTANTE - Duas implementações do Crediário:**
-1. **PDV Simples (Vendas.jsx + vendaController.js):**
-   - Gera Carne e Parcelas SEM juros (taxa 0%)
-   - Parcelas de valor fixo (total / numParcelas)
-   - Vencimentos mensais automáticos
-   - Atualiza saldoDevedor do cliente
-   - **Usado no fluxo normal de vendas**
-
-2. **Crediário Avançado (Crediario.jsx + crediarioController.js):**
-   - Cálculo com juros compostos
-   - Quitação antecipada com desconto (CDC Art. 52, §2º)
-   - Juros de mora e multa por atraso
-   - Simulador de quitação
-   - **Usado para gestão posterior de carnês**
+**⚠️ IMPORTANTE - Separação de Responsabilidades:**
+1. **PDV (PDV.jsx):**
+   - Tela exclusiva para realizar vendas
+   - Foco em agilidade e operação de caixa
+   
+2. **Histórico de Vendas (Vendas.jsx):**
+   - Tela de consulta e análise (Read-only)
+   - Filtros avançados, paginação e detalhes
+   - Geração de PDF e compartilhamento WhatsApp
 
 **Gaps:**
-- ⚠️ PDV.jsx e Vendas.jsx são redundantes - consolidar
 - ⚠️ Impressão de cupom fiscal
 - ⚠️ Leitor de código de barras
 - ⚠️ Atalhos de teclado (F2, F5, ESC)
@@ -395,10 +389,10 @@ Integrar com APIs como FocusNFe, eNotas.io ou NFe.io
 **Objetivo:** Corrigir inconsistências e unificar módulos
 
 - [ ] **1.1** Integrar crediarioService no PDV (unificar fluxo de crediário)
-- [ ] **1.2** Consolidar PDV (escolher Vendas.jsx ou PDV.jsx)
-- [ ] **1.3** Melhorar Financeiro.jsx (tabs, visão unificada)
+- [x] **1.2** Consolidar PDV (Vendas.jsx reformulado para consulta, PDV.jsx para vendas)
+- [x] **1.3** Melhorar Financeiro.jsx (tabs, visão unificada)
 - [ ] **1.4** Criar página de Gestão de Usuários
-- [ ] **1.5** Atualizar CHANGELOG.md com estado real
+- [x] **1.5** Atualizar CHANGELOG.md com estado real
 
 ### Fase 1.6: Sistema de Orçamentos e Pedidos Personalizados (4-5 dias) ⭐ APROVADO
 **Objetivo:** Implementar sistema completo de orçamentos para negócios com personalização

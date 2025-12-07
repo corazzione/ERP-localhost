@@ -1,0 +1,247 @@
+/* Premium Sales Page Styling */
+
+.sales-kpi-card {
+    @apply bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-850;
+    @apply border border-gray-100 dark:border-gray-700;
+    @apply rounded-2xl p-6 shadow-lg hover:shadow-xl;
+    @apply transition-all duration-300 ease-in-out;
+    @apply relative overflow-hidden;
+}
+
+.sales-kpi-card::before {
+    content: '';
+    @apply absolute top-0 right-0 w-32 h-32 opacity-10;
+    background: radial-gradient(circle, currentColor 0%, transparent 70%);
+}
+
+.sales-kpi-card:hover {
+    @apply transform -translate-y-1;
+}
+
+.sales-kpi-icon {
+    @apply p-3 rounded-xl;
+    @apply shadow-sm;
+    @apply transition-transform duration-300;
+}
+
+.sales-kpi-card:hover .sales-kpi-icon {
+    @apply transform scale-110;
+}
+
+.sales-kpi-value {
+    @apply text-3xl font-bold;
+    @apply bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-200;
+    @apply bg-clip-text text-transparent;
+}
+
+.order-overview-container {
+    @apply bg-white dark:bg-gray-800;
+    @apply rounded-2xl p-6 shadow-lg;
+    @apply border border-gray-100 dark:border-gray-700;
+}
+
+.status-bar-segment {
+    @apply transition-all duration-300 cursor-pointer;
+    @apply hover:opacity-80 hover:scale-105;
+    @apply relative group;
+}
+
+.status-bar-segment:hover::after {
+    content: attr(data-tooltip);
+    @apply absolute -top-12 left-1/2 transform -translate-x-1/2;
+    @apply bg-gray-900 dark:bg-gray-700 text-white text-xs;
+    @apply px-3 py-1.5 rounded-lg;
+    @apply whitespace-nowrap z-50;
+    @apply opacity-0 group-hover:opacity-100;
+    transition: opacity 0.2s;
+}
+
+.status-card {
+    @apply rounded-xl p-4;
+    @apply border border-transparent;
+    @apply transition-all duration-200;
+    @apply cursor-pointer;
+}
+
+.status-card:hover {
+    @apply border-current shadow-md transform scale-102;
+}
+
+.filter-panel {
+    @apply bg-white dark:bg-gray-800;
+    @apply rounded-2xl p-6 shadow-lg;
+    @apply border border-gray-100 dark:border-gray-700;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.filter-input,
+.filter-select {
+    @apply w-full px-4 py-2.5;
+    @apply border border-gray-200 dark:border-gray-600;
+    @apply rounded-xl;
+    @apply bg-white dark:bg-gray-700;
+    @apply text-gray-900 dark:text-white;
+    @apply transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+}
+
+.filter-input:hover,
+.filter-select:hover {
+    @apply border-gray-300 dark:border-gray-500;
+}
+
+.sales-table {
+    @apply w-full;
+    @apply bg-white dark:bg-gray-800;
+    @apply rounded-2xl overflow-hidden;
+    @apply shadow-lg border border-gray-100 dark:border-gray-700;
+}
+
+.sales-table thead {
+    @apply bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-750 dark:to-gray-800;
+}
+
+.sales-table th {
+    @apply px-6 py-4;
+    @apply text-xs font-semibold text-gray-500 dark:text-gray-400;
+    @apply uppercase tracking-wider;
+    @apply border-b border-gray-200 dark:border-gray-700;
+}
+
+.sales-table-row {
+    @apply transition-all duration-200;
+    @apply border-b border-gray-100 dark:border-gray-700;
+    @apply cursor-pointer;
+}
+
+.sales-table-row:hover {
+    @apply bg-gray-50 dark:bg-gray-750;
+    @apply shadow-sm;
+}
+
+.sales-table td {
+    @apply px-6 py-4;
+    @apply text-sm;
+}
+
+.status-badge {
+    @apply inline-flex items-center gap-1.5;
+    @apply px-3 py-1.5 rounded-full;
+    @apply text-xs font-semibold;
+    @apply shadow-sm;
+}
+
+.action-button {
+    @apply p-2 rounded-lg;
+    @apply transition-all duration-200;
+    @apply hover:scale-110;
+}
+
+.skeleton {
+    @apply animate-pulse bg-gray-200 dark:bg-gray-700;
+    @apply rounded;
+}
+
+.premium-modal {
+    @apply bg-white dark:bg-gray-800;
+    @apply rounded-2xl shadow-2xl;
+    @apply border border-gray-100 dark:border-gray-700;
+}
+
+.modal-section {
+    @apply p-4 rounded-xl;
+    @apply bg-gray-50 dark:bg-gray-750;
+    @apply border border-gray-100 dark:border-gray-700;
+}
+
+.btn-primary {
+    @apply px-6 py-2.5 rounded-xl;
+    @apply bg-gradient-to-r from-primary to-primary-dark;
+    @apply text-white font-semibold;
+    @apply shadow-lg hover:shadow-xl;
+    @apply transition-all duration-200;
+    @apply hover:transform hover:scale-105;
+}
+
+.btn-secondary {
+    @apply px-6 py-2.5 rounded-xl;
+    @apply bg-white dark:bg-gray-700;
+    @apply text-gray-700 dark:text-gray-300;
+    @apply border border-gray-200 dark:border-gray-600;
+    @apply font-semibold;
+    @apply shadow hover:shadow-md;
+    @apply transition-all duration-200;
+    @apply hover:transform hover:scale-105;
+}
+
+.pagination-button {
+    @apply px-4 py-2 rounded-xl;
+    @apply bg-white dark:bg-gray-700;
+    @apply border border-gray-200 dark:border-gray-600;
+    @apply text-sm font-medium;
+    @apply transition-all duration-200;
+    @apply hover:shadow-md;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.pagination-button:not(:disabled):hover {
+    @apply bg-gray-50 dark:bg-gray-600;
+    @apply transform scale-105;
+}
+
+/* Color variants */
+.color-blue {
+    @apply bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30;
+    @apply text-blue-600 dark:text-blue-400;
+}
+
+.color-green {
+    @apply bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30;
+    @apply text-green-600 dark:text-green-400;
+}
+
+.color-purple {
+    @apply bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30;
+    @apply text-purple-600 dark:text-purple-400;
+}
+
+.color-orange {
+    @apply bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30;
+    @apply text-orange-600 dark:text-orange-400;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.animate-scale-in {
+    animation: scaleIn 0.3s ease-out;
+}

@@ -1,15 +1,37 @@
+import { memo, useCallback, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 /**
  * 🪷 ClientBadge - Badge horizontal do cliente selecionado
+ * Optimized with React.memo
  */
-function ClientBadge({ cliente, onRemove }) {
+const ClientBadge = memo(function ClientBadge({ cliente, onRemove }) {
     const { isDark } = useTheme();
 
-    const bgBadge = isDark ? '#5b21b6' : '#faf5ff';
-    const textPrimary = isDark ? '#f1f5f9' : '#1f2937';
-    const textSecondary = isDark ? '#cbd5e1' : '#6b7280';
+    // Memoized theme colors
+    const themeColors = useMemo(() => ({
+        bgBadge: isDark ? '#5b21b6' : '#faf5ff',
+        textSecondary: isDark ? '#cbd5e1' : '#6b7280'
+    }), [isDark]);
+
+    const { bgBadge, textSecondary } = themeColors;
+
+    // Memoized initial
+    const initial = useMemo(() =>
+        cliente.nome?.charAt(0).toUpperCase(),
+        [cliente.nome]
+    );
+
+    const handleMouseEnter = useCallback((e) => {
+        e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.2)';
+        e.currentTarget.style.color = '#ef4444';
+    }, []);
+
+    const handleMouseLeave = useCallback((e) => {
+        e.currentTarget.style.backgroundColor = 'transparent';
+        e.currentTarget.style.color = '#8b5cf6';
+    }, []);
 
     return (
         <div style={{
@@ -36,7 +58,7 @@ function ClientBadge({ cliente, onRemove }) {
                 fontWeight: '700',
                 flexShrink: 0
             }}>
-                {cliente.nome?.charAt(0).toUpperCase()}
+                {initial}
             </div>
 
             {/* Info */}
@@ -81,20 +103,14 @@ function ClientBadge({ cliente, onRemove }) {
                     color: '#8b5cf6',
                     transition: 'all 150ms'
                 }}
-                onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.2)';
-                    e.currentTarget.style.color = '#ef4444';
-                }}
-                onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = '#8b5cf6';
-                }}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
                 title="Trocar cliente"
             >
                 <X size={20} />
             </button>
         </div>
     );
-}
+});
 
 export default ClientBadge;

@@ -2,6 +2,24 @@
 
 Este documento mantém um registro das alterações, correções e novas funcionalidades implementadas no projeto.
 
+## [2025-12-03] - Reformulação do Módulo de Vendas
+
+### ✨ Melhorias na Aba Vendas
+- **Separação de Responsabilidades:** A aba "Vendas" agora é exclusivamente para consulta e histórico, separada do PDV.
+- **UI/UX Moderno:** Interface redesenhada com estilo "Apple-like", ícones Lucide e layout limpo.
+- **Filtros Avançados:** Implementada barra de filtros combináveis (Loja, Período, Status, Forma de Pagamento, Cliente, Número).
+- **Paginação:** Implementada paginação no servidor para melhor performance com grandes volumes de dados.
+- **Detalhes da Venda:** Novo modal de detalhes com visualização completa dos itens, totais e informações financeiras.
+- **Ações Rápidas:**
+  - **PDF:** Geração e download de invoice/recibo (estrutura base implementada).
+  - **WhatsApp:** Compartilhamento direto dos detalhes da venda via WhatsApp.
+
+### ⚙️ Backend
+- **Endpoint `GET /api/vendas`:** Atualizado para suportar paginação (`page`, `limit`), ordenação e todos os novos filtros.
+- **Endpoint `GET /api/vendas/:id/invoice`:** Novo endpoint para geração de PDF.
+
+---
+
 ## [2025-11-25] - Ciclo de Desenvolvimento & QA
 
 ### ✨ Novas Funcionalidades
