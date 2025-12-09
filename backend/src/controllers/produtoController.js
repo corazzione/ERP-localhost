@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma.js';
 
 export const listarProdutos = async (req, res) => {
     try {
-        const { page = 1, limit = 50, search = '', ativo } = req.query;
+        const { page = 1, limit = 50, search = '', ativo, lojaId } = req.query;
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
         const take = Math.min(parseInt(limit), 100);
@@ -14,7 +14,8 @@ export const listarProdutos = async (req, res) => {
                     { codigo: { contains: search, mode: 'insensitive' } }
                 ]
             }),
-            ...(ativo !== undefined && { ativo: ativo === 'true' })
+            ...(ativo !== undefined && { ativo: ativo === 'true' }),
+            ...(lojaId && { lojaId }) // Filter by store
         };
 
         const [produtos, total] = await Promise.all([
@@ -22,7 +23,7 @@ export const listarProdutos = async (req, res) => {
                 where,
                 skip,
                 take,
-                include: { variacoes: true },
+                include: { variacoes: true, loja: { select: { nome: true } } },
                 orderBy: { nome: 'asc' }
             }),
             prisma.produto.count({ where })

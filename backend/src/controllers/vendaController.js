@@ -3,7 +3,7 @@ import { generateReceiptPDF } from '../services/pdfService.js';
 
 export const criarVenda = async (req, res) => {
     try {
-        const { clienteId, itens, desconto, formaPagamento, observacoes, usarCredito, lojaId } = req.body;
+        const { clienteId, itens, desconto, formaPagamento, observacoes, usarCredito, lojaId, subtotal: frontendSubtotal } = req.body;
         const usuarioId = req.userId;
 
         // 1. Validar Loja
@@ -11,13 +11,20 @@ export const criarVenda = async (req, res) => {
             return res.status(400).json({ error: 'Loja é obrigatória para realizar a venda.' });
         }
 
-        // Calcular totais
+        // Calcular totais - usar subtotal do frontend se disponível (considera descontos por item)
+        // Se não disponível, recalcula a partir dos itens
         let subtotal = 0;
+        let descontoItens = 0;
+
         for (const item of itens) {
-            subtotal += item.quantidade * item.precoUnit;
+            const itemBruto = item.quantidade * item.precoUnit;
+            subtotal += itemBruto;
+            descontoItens += (item.desconto || 0);
         }
 
-        const totalInicial = subtotal - (desconto || 0);
+        // Desconto total = descontos individuais + desconto global
+        const descontoTotal = descontoItens + (desconto || 0);
+        const totalInicial = subtotal - descontoTotal;
         let totalPagar = totalInicial;
         let creditoUsado = 0;
 
@@ -87,7 +94,7 @@ export const criarVenda = async (req, res) => {
                     usuarioId,
                     lojaId: lojaId,
                     subtotal,
-                    desconto: desconto || 0,
+                    desconto: descontoTotal,
                     total: totalInicial,
                     formaPagamento: totalPagar <= 0 ? 'credito_loja' : formaPagamento,
                     statusPagamento,
@@ -422,10 +429,9 @@ export const obterKPIsVendas = async (req, res) => {
 
         // Calcular KPIs
         const totalVendas = vendas.length;
-        const totalRecebido = vendas
-            .filter(v => v.statusPagamento === 'pago')
-            .reduce((sum, v) => sum + parseFloat(v.total), 0);
-        const ticketMedio = totalVendas > 0 ? totalRecebido / totalVendas : 0;
+        const vendasPagas = vendas.filter(v => v.statusPagamento === 'pago');
+        const totalRecebido = vendasPagas.reduce((sum, v) => sum + parseFloat(v.total), 0);
+        const ticketMedio = vendasPagas.length > 0 ? totalRecebido / vendasPagas.length : 0;
         const crediarioGerado = vendas
             .filter(v => v.formaPagamento === 'crediario')
             .reduce((sum, v) => sum + parseFloat(v.total), 0);

@@ -63,8 +63,8 @@ function App() {
                                 <Route path="clientes/:id" element={<ClienteDetalhes />} />
                                 <Route path="produtos" element={<Produtos />} />
                                 <Route path="vendas" element={<Vendas />} />
-                                <Route path="crediario" element={<CrediarioDashboard />} />
-                                <Route path="crediario/parcelas" element={<Crediario />} />
+                                <Route path="crediario" element={<Crediario />} />
+                                <Route path="crediario/dashboard" element={<CrediarioDashboard />} />
                                 <Route path="financeiro" element={<FinanceiroDashboard />} />
                                 <Route path="financeiro/contas-receber" element={<Financeiro />} />
                                 <Route path="relatorios" element={<RelatoriosEnhanced />} />

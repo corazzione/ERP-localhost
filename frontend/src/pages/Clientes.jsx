@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Users, Plus, Search } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Users, Plus, Search, MapPin, Loader2 } from 'lucide-react';
 import api from '../services/api';
 import DataTable from '../components/DataTable';
 import ClientDrawer from '../components/ClientDrawer';
@@ -17,12 +17,17 @@ function Clientes() {
     const [selectedClient, setSelectedClient] = useState(null);
     const [showDrawer, setShowDrawer] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [loadingCep, setLoadingCep] = useState(false);
     const [formData, setFormData] = useState({
         nome: '',
-        cpf: '',
+        cpfCnpj: '',
         telefone: '',
         email: '',
+        cep: '',
         endereco: '',
+        numero: '',
+        complemento: '',
+        bairro: '',
         cidade: '',
         estado: ''
     });
@@ -34,7 +39,7 @@ function Clientes() {
     useEffect(() => {
         const filtered = clientes.filter(cliente =>
             cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (cliente.cpf && cliente.cpf.includes(searchTerm)) ||
+            (cliente.cpfCnpj && cliente.cpfCnpj.includes(searchTerm)) ||
             (cliente.telefone && cliente.telefone.includes(searchTerm))
         );
         setFilteredClientes(filtered);
@@ -62,7 +67,19 @@ function Clientes() {
 
     const handleEdit = (cliente) => {
         setEditingCliente(cliente);
-        setFormData(cliente);
+        setFormData({
+            nome: cliente.nome || '',
+            cpfCnpj: cliente.cpfCnpj || '',
+            telefone: cliente.telefone || '',
+            email: cliente.email || '',
+            cep: cliente.cep || '',
+            endereco: cliente.endereco || '',
+            numero: cliente.numero || '',
+            complemento: cliente.complemento || '',
+            bairro: cliente.bairro || '',
+            cidade: cliente.cidade || '',
+            estado: cliente.estado || ''
+        });
         setShowModal(true);
     };
 
@@ -70,14 +87,55 @@ function Clientes() {
         setEditingCliente(null);
         setFormData({
             nome: '',
-            cpf: '',
+            cpfCnpj: '',
             telefone: '',
             email: '',
+            cep: '',
             endereco: '',
+            numero: '',
+            complemento: '',
+            bairro: '',
             cidade: '',
             estado: ''
         });
         setShowModal(true);
+    };
+
+    // ViaCEP autofill
+    const buscarCep = useCallback(async (cep) => {
+        const cepLimpo = cep.replace(/\D/g, '');
+        if (cepLimpo.length !== 8) return;
+
+        setLoadingCep(true);
+        try {
+            const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+            const data = await response.json();
+
+            if (data.erro) {
+                showToast('CEP não encontrado', 'error');
+                return;
+            }
+
+            setFormData(prev => ({
+                ...prev,
+                endereco: data.logradouro || prev.endereco,
+                bairro: data.bairro || prev.bairro,
+                cidade: data.localidade || prev.cidade,
+                estado: data.uf || prev.estado
+            }));
+            showToast('Endereço preenchido automaticamente!', 'success');
+        } catch (error) {
+            console.error('Erro ao buscar CEP:', error);
+            showToast('Erro ao buscar CEP', 'error');
+        } finally {
+            setLoadingCep(false);
+        }
+    }, [showToast]);
+
+    const handleCepBlur = () => {
+        if (formData.cep) {
+            buscarCep(formData.cep);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -108,8 +166,8 @@ function Clientes() {
             )
         },
         {
-            key: 'cpf',
-            label: 'CPF',
+            key: 'cpfCnpj',
+            label: 'CPF/CNPJ',
             sortable: true
         },
         {
@@ -199,12 +257,13 @@ function Clientes() {
                             </div>
 
                             <div className="form-group">
-                                <label className="label">CPF</label>
+                                <label className="label">CPF/CNPJ *</label>
                                 <input
                                     type="text"
                                     className="input"
-                                    value={formData.cpf}
-                                    onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                                    value={formData.cpfCnpj}
+                                    onChange={(e) => setFormData({ ...formData, cpfCnpj: e.target.value })}
+                                    required
                                 />
                             </div>
 
@@ -228,13 +287,81 @@ function Clientes() {
                                 />
                             </div>
 
-                            <div className="form-group full-width">
-                                <label className="label">Endereço</label>
+                            {/* Address Section */}
+                            <div className="form-group full-width" style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6b7280', fontSize: '14px', fontWeight: '600' }}>
+                                    <MapPin size={16} />
+                                    <span>Endereço</span>
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label className="label">CEP</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        value={formData.cep}
+                                        onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                                        onBlur={handleCepBlur}
+                                        placeholder="00000-000"
+                                        maxLength={9}
+                                    />
+                                    {loadingCep && (
+                                        <Loader2
+                                            size={16}
+                                            style={{
+                                                position: 'absolute',
+                                                right: '12px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                animation: 'spin 1s linear infinite'
+                                            }}
+                                        />
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                                <label className="label">Logradouro</label>
                                 <input
                                     type="text"
                                     className="input"
                                     value={formData.endereco}
                                     onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                                    placeholder="Rua, Avenida..."
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label className="label">Número</label>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    value={formData.numero}
+                                    onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
+                                    placeholder="123"
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label className="label">Complemento</label>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    value={formData.complemento}
+                                    onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
+                                    placeholder="Apto, Sala..."
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label className="label">Bairro</label>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    value={formData.bairro}
+                                    onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
                                 />
                             </div>
 
@@ -249,13 +376,14 @@ function Clientes() {
                             </div>
 
                             <div className="form-group">
-                                <label className="label">Estado</label>
+                                <label className="label">UF</label>
                                 <input
                                     type="text"
                                     className="input"
                                     value={formData.estado}
-                                    onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
+                                    onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}
                                     maxLength={2}
+                                    placeholder="SP"
                                 />
                             </div>
                         </div>
@@ -278,8 +406,16 @@ function Clientes() {
                 onClose={() => setShowDrawer(false)}
                 client={selectedClient}
             />
+
+            <style>{`
+                @keyframes spin {
+                    from { transform: translateY(-50%) rotate(0deg); }
+                    to { transform: translateY(-50%) rotate(360deg); }
+                }
+            `}</style>
         </div>
     );
 }
 
 export default Clientes;
+
