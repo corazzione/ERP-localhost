@@ -54,16 +54,17 @@
 
 .sales-kpi-card {
     background-color: var(--bg-card);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: var(--radius-card);
-    padding: 24px;
-    height: 120px;
+    padding: 1.25rem 1.5rem;
+    min-height: 130px;
     box-shadow: var(--shadow-soft);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     position: relative;
     transition: all 0.3s ease;
+    /* No overflow: hidden - let content breathe */
 }
 
 .sales-kpi-card:hover {
@@ -75,7 +76,7 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 8px;
+    margin-bottom: 0.75rem;
 }
 
 .kpi-title {
@@ -86,7 +87,7 @@
 
 .kpi-icon-wrapper {
     color: var(--text-secondary);
-    opacity: 0.8;
+    opacity: 0.7;
 }
 
 .kpi-content {
@@ -94,20 +95,72 @@
     align-items: flex-end;
     justify-content: space-between;
     width: 100%;
+    gap: 1rem;
+    margin-top: auto;
 }
 
 .kpi-value {
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 700;
     color: var(--text-primary);
     letter-spacing: -0.5px;
-    line-height: 1;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1;
 }
 
 .kpi-sparkline {
-    height: 30px;
+    height: 28px;
     width: 80px;
     opacity: 0.9;
+    flex-shrink: 0;
+}
+
+.kpi-sparkline-wrapper {
+    display: flex;
+    align-items: flex-end;
+    flex-shrink: 0;
+    height: 32px;
+    overflow: visible;
+}
+
+/* Skeleton loading states */
+.sales-kpi-card.skeleton {
+    pointer-events: none;
+}
+
+.skeleton-text {
+    background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+}
+
+.skeleton-circle {
+    background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 50%;
+}
+
+.skeleton-chart {
+    background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 /* SECTION 2: ORDER OVERVIEW */
@@ -729,4 +782,35 @@
 
 .dark .status-bar-container {
     background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Dark Mode - KPI Cards */
+.dark .sales-kpi-card,
+[data-theme="dark"] .sales-kpi-card {
+    background-color: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.dark .kpi-title,
+[data-theme="dark"] .kpi-title {
+    color: #94a3b8;
+}
+
+.dark .kpi-value,
+[data-theme="dark"] .kpi-value {
+    color: #f8fafc;
+}
+
+.dark .kpi-icon-wrapper,
+[data-theme="dark"] .kpi-icon-wrapper {
+    color: #64748b;
+}
+
+/* Dark Mode - Skeleton Loading */
+.dark .skeleton-text,
+.dark .skeleton-circle,
+.dark .skeleton-chart {
+    background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+    background-size: 200% 100%;
 }

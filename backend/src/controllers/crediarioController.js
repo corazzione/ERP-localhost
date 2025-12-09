@@ -423,3 +423,91 @@ export const listarParcelas = async (req, res) => {
         res.status(500).json({ error: 'Erro ao carregar parcelas' });
     }
 };
+
+// Simular antecipação de parcela única
+// Seguindo CDC Art. 52 §2º - Desconto proporcional aos juros futuros
+export const simularAntecipacaoParcela = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const parcela = await prisma.parcela.findUnique({
+            where: { id },
+            include: {
+                carne: {
+                    include: {
+                        cliente: { select: { nome: true } }
+                    }
+                }
+            }
+        });
+
+        if (!parcela) {
+            return res.status(404).json({ error: 'Parcela não encontrada' });
+        }
+
+        if (parcela.status === 'pago') {
+            return res.status(400).json({ error: 'Parcela já foi paga' });
+        }
+
+        const hoje = new Date();
+        const dataVenc = new Date(parcela.dataVencimento);
+        const diasAntecipados = Math.floor((dataVenc - hoje) / (1000 * 60 * 60 * 24));
+        const valorParcela = parseFloat(parcela.valorParcela);
+
+        // Calcular valor principal por parcela (sem juros) - mesma lógica do CDC
+        const valorOriginalCarne = parseFloat(parcela.carne.valorOriginal);
+        const numParcelas = parcela.carne.numParcelas;
+        const valorPrincipalPorParcela = valorOriginalCarne / numParcelas;
+
+        // Se não está antecipando (vencimento já passou ou é hoje)
+        if (diasAntecipados <= 0) {
+            // Calcular juros de mora se atrasado
+            const diasAtraso = Math.abs(diasAntecipados);
+            const { calcularJurosMora } = await import('../services/crediarioService.js');
+            const mora = calcularJurosMora(valorParcela, diasAtraso);
+
+            return res.json({
+                parcelaId: parcela.id,
+                numeroParcela: parcela.numeroParcela,
+                carneNumero: parcela.carne.numeroCarne,
+                clienteNome: parcela.carne.cliente?.nome,
+                dataVencimento: parcela.dataVencimento,
+                valorOriginal: valorParcela,
+                valorComDesconto: mora.valorTotal,
+                desconto: 0,
+                jurosMora: mora.jurosMora,
+                multaAtraso: mora.multaAtraso,
+                diasAtraso,
+                diasAntecipados: 0,
+                economiaPercentual: '0.0',
+                mensagem: diasAtraso > 0
+                    ? `Parcela vencida há ${diasAtraso} dias. Valor com mora: R$ ${mora.valorTotal.toFixed(2)}`
+                    : 'Parcela vence hoje. Pague sem juros adicionais.'
+            });
+        }
+
+        // ANTECIPAÇÃO - Desconto total dos juros da parcela (CDC Art. 52 §2º)
+        // O cliente paga apenas o valor principal, sem os juros embutidos
+        const desconto = valorParcela - valorPrincipalPorParcela;
+        const valorComDesconto = valorPrincipalPorParcela;
+        const economiaPercentual = ((desconto / valorParcela) * 100).toFixed(1);
+
+        res.json({
+            parcelaId: parcela.id,
+            numeroParcela: parcela.numeroParcela,
+            carneNumero: parcela.carne.numeroCarne,
+            clienteNome: parcela.carne.cliente?.nome,
+            dataVencimento: parcela.dataVencimento,
+            valorOriginal: valorParcela,
+            valorPrincipal: parseFloat(valorPrincipalPorParcela.toFixed(2)),
+            valorComDesconto: parseFloat(valorComDesconto.toFixed(2)),
+            desconto: parseFloat(desconto.toFixed(2)),
+            diasAntecipados,
+            economiaPercentual,
+            mensagem: `Pagando hoje, você economiza R$ ${desconto.toFixed(2)} (${economiaPercentual}% de desconto - ${diasAntecipados} dias antecipados)`
+        });
+    } catch (error) {
+        console.error('Erro ao simular antecipação:', error);
+        res.status(500).json({ error: 'Erro ao simular antecipação' });
+    }
+};

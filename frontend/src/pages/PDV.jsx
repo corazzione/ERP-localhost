@@ -21,6 +21,7 @@ import ClientBadge from '../components/pdv/ClientBadge';
 import ConfirmModal from '../components/ConfirmModal';
 import StoreDropdown from '../components/StoreDropdown';
 import MissingDataModal from '../components/MissingDataModal';
+import CreateBudgetModal from '../components/pdv/CreateBudgetModal';
 
 /**
  * PDV - Ponto de Venda
@@ -48,6 +49,7 @@ function PDV() {
     const [descontoGlobal, setDescontoGlobal] = useState(0);
     const [acrescimo, setAcrescimo] = useState(0);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const [showBudgetModal, setShowBudgetModal] = useState(false);
 
     // Estado para dados faltantes do cliente (Recibo)
     const [missingData, setMissingData] = useState(null);
@@ -84,10 +86,11 @@ function PDV() {
     // Filtered products - only recalculates when necessary
     const produtosFiltrados = useMemo(() => {
         const searchLower = buscaDebounced.toLowerCase();
+        // Only show products that belong to the selected store
         return produtos.filter(p =>
             (p.nome.toLowerCase().includes(searchLower) ||
                 p.codigo.toLowerCase().includes(searchLower)) &&
-            (store === 'all' || !p.lojaId || p.lojaId === store)
+            p.lojaId === store
         );
     }, [produtos, buscaDebounced, store]);
 
@@ -119,14 +122,21 @@ function PDV() {
     // =========== DATA LOADING ===========
 
     const carregarProdutos = useCallback(async () => {
+        // Only load products if a specific store is selected
+        if (store === 'all') {
+            setProdutos([]);
+            return;
+        }
         try {
-            const response = await api.get('/produtos');
+            const response = await api.get('/produtos', {
+                params: { lojaId: store }
+            });
             setProdutos(response.data.data || response.data);
         } catch (error) {
             devLog('Erro ao carregar produtos:', error);
             showToast('Erro ao carregar produtos', 'error');
         }
-    }, [showToast]);
+    }, [store, showToast]);
 
     const carregarClientes = useCallback(async () => {
         try {
@@ -147,9 +157,9 @@ function PDV() {
 
     const handleBarcodeScan = useCallback((barcode) => {
         try {
+            // Only find products that belong to the selected store
             const produto = produtos.find(p =>
-                p.codigo === barcode &&
-                (store === 'all' || !p.lojaId || p.lojaId === store)
+                p.codigo === barcode && p.lojaId === store
             );
 
             if (produto) {
@@ -282,7 +292,7 @@ function PDV() {
         }
     }, [store, clienteSelecionado, carrinho, subtotal, descontoGlobal, acrescimo, total, showToast, limparVenda]);
 
-    const handleSaveAsBudget = useCallback(async () => {
+    const handleOpenBudgetModal = useCallback(() => {
         if (carrinho.length === 0) {
             showToast('Adicione produtos ao carrinho primeiro', 'error');
             playSound('error');
@@ -295,6 +305,14 @@ function PDV() {
             return;
         }
 
+        setShowBudgetModal(true);
+    }, [carrinho.length, store, showToast]);
+
+    const handleCloseBudgetModal = useCallback(() => {
+        setShowBudgetModal(false);
+    }, []);
+
+    const handleConfirmBudget = useCallback(async (budgetOptions) => {
         setLoading(true);
         try {
             const orcamentoData = {
@@ -312,18 +330,22 @@ function PDV() {
                 desconto: descontoGlobal,
                 acrescimo: acrescimo,
                 total: total,
-                status: 'pendente'
+                status: 'pendente',
+                origem: 'pdv',
+                validadeAte: budgetOptions.validadeAte,
+                observacoes: budgetOptions.observacoes,
+                observacoesInternas: budgetOptions.observacoesInternas
             };
 
             const response = await api.post('/orcamentos', orcamentoData);
 
             playSound('success');
-            showToast(`✅ Orçamento #${response.data.numero} criado com sucesso!`, 'success');
-            limparVenda();
+            setShowBudgetModal(false);
 
-            setTimeout(() => {
-                navigate('/orcamentos');
-            }, 1500);
+            // Show success toast with actions
+            showToast(`✅ Orçamento #${response.data.numero} criado com sucesso!`, 'success');
+
+            limparVenda();
         } catch (error) {
             devLog('Erro ao salvar orçamento:', error);
             showToast(error.response?.data?.error || 'Erro ao salvar orçamento', 'error');
@@ -331,7 +353,7 @@ function PDV() {
         } finally {
             setLoading(false);
         }
-    }, [carrinho, store, clienteSelecionado, subtotal, descontoGlobal, acrescimo, total, showToast, navigate, limparVenda]);
+    }, [carrinho, store, clienteSelecionado, subtotal, descontoGlobal, acrescimo, total, showToast, limparVenda]);
 
     const adicionarAoCarrinho = useCallback((produto) => {
         setCarrinho(prev => {
@@ -465,7 +487,7 @@ function PDV() {
             }
             if (e.key === 'F8' && cartItemCount > 0) {
                 e.preventDefault();
-                handleSaveAsBudget();
+                handleOpenBudgetModal();
             }
             if (e.key === 'Escape' && showPagamento) {
                 e.preventDefault();
@@ -475,7 +497,7 @@ function PDV() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [cartItemCount, showPagamento, handleOpenPayment, handleSaveAsBudget, handleOpenQuickClient, handleOpenClearConfirm, handleClosePagamento]);
+    }, [cartItemCount, showPagamento, handleOpenPayment, handleOpenBudgetModal, handleOpenQuickClient, handleOpenClearConfirm, handleClosePagamento]);
 
     // =========== RENDER ===========
 
@@ -679,7 +701,7 @@ function PDV() {
                             <button
                                 className="btn btn-outline"
                                 disabled={cartItemCount === 0 || store === 'all'}
-                                onClick={handleSaveAsBudget}
+                                onClick={handleOpenBudgetModal}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
@@ -744,6 +766,18 @@ function PDV() {
                 missingFields={missingData?.missingFields}
                 clienteId={missingData?.clienteId}
                 onSuccess={handleMissingDataSuccess}
+            />
+
+            <CreateBudgetModal
+                isOpen={showBudgetModal}
+                onClose={handleCloseBudgetModal}
+                carrinho={carrinho}
+                cliente={clienteSelecionado}
+                subtotal={subtotal}
+                descontoGlobal={descontoGlobal}
+                total={total}
+                onConfirm={handleConfirmBudget}
+                loading={loading}
             />
         </div>
     );

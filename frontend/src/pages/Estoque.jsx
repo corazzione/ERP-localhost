@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, AlertTriangle, CheckCircle, TrendingUp, Plus, Edit } from 'lucide-react';
+import { Package, AlertTriangle, CheckCircle, TrendingUp, Plus, Edit, Store } from 'lucide-react';
 import api from '../services/api';
 import DataTable from '../components/DataTable';
 import Badge from '../components/Badge';
@@ -11,17 +11,35 @@ function Estoque() {
     const { showToast } = useToast();
     const { isDark } = useTheme();
     const [produtos, setProdutos] = useState([]);
+    const [lojas, setLojas] = useState([]);
+    const [lojaId, setLojaId] = useState(''); // Empty means all stores
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all'); // all, low, ok, high
 
     useEffect(() => {
-        carregarEstoque();
+        carregarLojas();
     }, []);
+
+    useEffect(() => {
+        carregarEstoque();
+    }, [lojaId]); // Reload when store changes
+
+    const carregarLojas = async () => {
+        try {
+            const response = await api.get('/lojas');
+            const data = response.data.data || response.data;
+            setLojas(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Erro ao carregar lojas:', error);
+        }
+    };
 
     const carregarEstoque = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/produtos');
+            const params = {};
+            if (lojaId) params.lojaId = lojaId;
+            const response = await api.get('/produtos', { params });
             const data = response.data.data || response.data;
             setProdutos(data);
         } catch (error) {
@@ -126,7 +144,27 @@ function Estoque() {
                         <p className="page-subtitle">Gerencie o inventário de produtos</p>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    {/* Store Filter */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Store size={18} color={isDark ? '#9ca3af' : '#6b7280'} />
+                        <select
+                            value={lojaId}
+                            onChange={(e) => setLojaId(e.target.value)}
+                            className="btn btn-outline"
+                            style={{
+                                padding: '0.5rem 1rem',
+                                borderRadius: '8px',
+                                minWidth: '150px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <option value="">Todas as Lojas</option>
+                            {lojas.map(loja => (
+                                <option key={loja.id} value={loja.id}>{loja.nome}</option>
+                            ))}
+                        </select>
+                    </div>
                     <button className="btn btn-outline">
                         <Edit size={18} />
                         Ajustar Estoque

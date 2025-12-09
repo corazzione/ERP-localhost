@@ -1,0 +1,453 @@
+/* ========================================
+   BudgetCard - Apple-Style Premium Cards
+   Refined for Dark Mode & Visual Consistency
+   ======================================== */
+
+.budget-card {
+    background: var(--card-bg, #ffffff);
+    border-radius: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+/* Subtle hover glow */
+.budget-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.budget-card.expiring-soon {
+    border-color: rgba(245, 158, 11, 0.4);
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.15);
+}
+
+/* ===================== Header ===================== */
+.budget-card-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.6) 0%, transparent 100%);
+}
+
+.budget-card-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.625rem;
+    gap: 0.75rem;
+}
+
+.budget-number {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary, #1e293b);
+    margin: 0;
+    letter-spacing: -0.01em;
+    font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+}
+
+/* Origin Badge (PDV) */
+.budget-origin-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.budget-origin-badge.origin-pdv {
+    background: rgba(139, 92, 246, 0.12);
+    color: #8b5cf6;
+}
+
+/* ===================== Status Badge - Unified Premium ===================== */
+.budget-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.875rem;
+    border-radius: 20px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+    min-height: 28px;
+}
+
+.budget-status-badge svg {
+    flex-shrink: 0;
+}
+
+.budget-status-badge.status-pending {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+}
+
+.budget-status-badge.status-approved {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+}
+
+.budget-status-badge.status-rejected {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #991b1b;
+}
+
+.budget-status-badge.status-expired {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    color: #64748b;
+}
+
+.budget-status-badge.status-converted {
+    background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+    color: #6d28d9;
+}
+
+/* Date Row */
+.budget-date {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--text-secondary, #64748b);
+}
+
+/* ===================== Body ===================== */
+.budget-card-body {
+    padding: 1.25rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+/* Info Rows - Consistent Styling */
+.budget-info-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(248, 250, 252, 0.5);
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.budget-info-row.expiring {
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.15);
+}
+
+.budget-info-icon {
+    color: var(--text-tertiary, #94a3b8);
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+}
+
+.budget-info-label {
+    color: var(--text-secondary, #64748b);
+    min-width: 70px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+.budget-info-value {
+    color: var(--text-primary, #1e293b);
+    font-weight: 600;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    text-align: right;
+    justify-content: flex-end;
+}
+
+.expiring-icon {
+    color: #f59e0b;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* ===================== Total Row - Consistent with Info Rows ===================== */
+.budget-total-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-top: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 10px;
+    background: rgba(248, 250, 252, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    font-size: 0.875rem;
+}
+
+.budget-total-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary, #64748b);
+    min-width: 70px;
+}
+
+.budget-total-value {
+    color: #7c3aed !important;
+    font-weight: 700 !important;
+}
+
+/* ===================== Actions ===================== */
+.budget-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem 1.25rem;
+    background: rgba(248, 250, 252, 0.5);
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.budget-action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.625rem 0.875rem;
+    border-radius: 12px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.budget-action-btn span {
+    display: none;
+}
+
+@media (min-width: 640px) {
+    .budget-action-btn span {
+        display: inline;
+    }
+}
+
+/* View Button - Standardized Secondary */
+.budget-btn-view {
+    background: rgba(248, 250, 252, 0.9);
+    color: var(--text-secondary, #64748b);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(4px);
+}
+
+.budget-btn-view:hover {
+    background: rgba(255, 255, 255, 1);
+    color: #6366f1;
+    border-color: rgba(99, 102, 241, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12);
+}
+
+.budget-btn-approve {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.budget-btn-approve:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.budget-btn-reject {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.budget-btn-reject:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.budget-btn-convert {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+}
+
+.budget-btn-convert:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+/* ===================== DARK MODE - Full Integration ===================== */
+[data-theme="dark"] .budget-card,
+.dark .budget-card {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] .budget-card:hover,
+.dark .budget-card:hover {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .budget-card-header,
+.dark .budget-card-header {
+    border-color: rgba(255, 255, 255, 0.06);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+}
+
+[data-theme="dark"] .budget-number,
+.dark .budget-number {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .budget-origin-badge.origin-pdv,
+.dark .budget-origin-badge.origin-pdv {
+    background: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+}
+
+/* Dark Mode Status Badges - Enhanced Visibility */
+[data-theme="dark"] .budget-status-badge.status-pending,
+.dark .budget-status-badge.status-pending {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.25) 100%);
+    color: #fbbf24;
+}
+
+[data-theme="dark"] .budget-status-badge.status-approved,
+.dark .budget-status-badge.status-approved {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.25) 100%);
+    color: #34d399;
+}
+
+[data-theme="dark"] .budget-status-badge.status-rejected,
+.dark .budget-status-badge.status-rejected {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.25) 100%);
+    color: #f87171;
+}
+
+[data-theme="dark"] .budget-status-badge.status-expired,
+.dark .budget-status-badge.status-expired {
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.2) 0%, rgba(71, 85, 105, 0.25) 100%);
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .budget-status-badge.status-converted,
+.dark .budget-status-badge.status-converted {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(124, 58, 237, 0.3) 100%);
+    color: #c4b5fd;
+}
+
+/* Dark Mode Info Rows */
+[data-theme="dark"] .budget-info-row,
+.dark .budget-info-row {
+    background: rgba(51, 65, 85, 0.4);
+    border-color: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .budget-info-row.expiring,
+.dark .budget-info-row.expiring {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+[data-theme="dark"] .budget-info-icon,
+.dark .budget-info-icon {
+    color: #64748b;
+}
+
+[data-theme="dark"] .budget-info-label,
+.dark .budget-info-label {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .budget-info-value,
+.dark .budget-info-value {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .budget-date,
+.dark .budget-date {
+    color: #94a3b8;
+}
+
+/* Dark Mode Total Row - Same as Info Rows */
+[data-theme="dark"] .budget-total-row,
+.dark .budget-total-row {
+    background: rgba(51, 65, 85, 0.4);
+    border-color: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .budget-total-label,
+.dark .budget-total-label {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .budget-total-value,
+.dark .budget-total-value {
+    color: #a78bfa;
+}
+
+/* Dark Mode Actions */
+[data-theme="dark"] .budget-card-actions,
+.dark .budget-card-actions {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .budget-btn-view,
+.dark .budget-btn-view {
+    background: rgba(51, 65, 85, 0.6);
+    color: #cbd5e1;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .budget-btn-view:hover,
+.dark .budget-btn-view:hover {
+    background: rgba(71, 85, 105, 0.7);
+    color: #a78bfa;
+    border-color: rgba(139, 92, 246, 0.3);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+}
+
+/* ===================== Responsive ===================== */
+@media (max-width: 480px) {
+    .budget-card-header {
+        padding: 1rem;
+    }
+
+    .budget-card-body {
+        padding: 1rem;
+    }
+
+    .budget-card-actions {
+        padding: 0.875rem 1rem;
+    }
+
+    .budget-status-badge {
+        padding: 0.3rem 0.625rem;
+        font-size: 0.625rem;
+    }
+
+    .budget-info-row {
+        padding: 0.375rem 0.625rem;
+    }
+}

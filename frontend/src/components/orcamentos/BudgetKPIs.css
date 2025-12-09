@@ -1,0 +1,198 @@
+/* ========================================
+   BudgetKPIs - Apple-Style Premium Cards
+   ======================================== */
+
+.budget-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+    max-width: 1400px;
+    margin: 0 auto 2rem;
+    padding: 0 1.5rem;
+}
+
+.budget-kpi-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: var(--card-bg, #ffffff);
+    border-radius: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.budget-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.kpi-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.kpi-icon-wrapper::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.25) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.kpi-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.kpi-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.kpi-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary, #1e293b);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.kpi-value.currency {
+    font-size: 1.25rem;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Skeleton Loading */
+.budget-kpi-card.skeleton {
+    pointer-events: none;
+}
+
+.budget-kpi-card.skeleton::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+    animation: skeleton-wave 1.5s infinite;
+}
+
+@keyframes skeleton-wave {
+    100% {
+        left: 100%;
+    }
+}
+
+.kpi-skeleton-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+.kpi-skeleton-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.kpi-skeleton-label {
+    width: 60%;
+    height: 12px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+.kpi-skeleton-value {
+    width: 45%;
+    height: 24px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+/* Dark Mode */
+[data-theme="dark"] .budget-kpi-card,
+.dark .budget-kpi-card {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .budget-kpi-card:hover,
+.dark .budget-kpi-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .kpi-value,
+.dark .kpi-value {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] .kpi-label,
+.dark .kpi-label {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .kpi-skeleton-icon,
+[data-theme="dark"] .kpi-skeleton-label,
+[data-theme="dark"] .kpi-skeleton-value,
+.dark .kpi-skeleton-icon,
+.dark .kpi-skeleton-label,
+.dark .kpi-skeleton-value {
+    background: linear-gradient(90deg, #334155 0%, #475569 100%);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .budget-kpis {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .budget-kpis {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 0 1rem;
+        gap: 1rem;
+    }
+
+    .budget-kpi-card {
+        padding: 1rem;
+    }
+
+    .kpi-icon-wrapper {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+    }
+
+    .kpi-value {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .budget-kpis {
+        grid-template-columns: 1fr;
+    }
+}

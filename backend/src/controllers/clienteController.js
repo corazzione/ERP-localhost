@@ -37,7 +37,7 @@ export const buscarCliente = async (req, res) => {
 
 export const criarCliente = async (req, res) => {
     try {
-        const { nome, cpfCnpj, email, telefone, endereco, cidade, estado, cep, limiteCredito } = req.body;
+        const { nome, cpfCnpj, email, telefone, cep, endereco, numero, complemento, bairro, cidade, estado, limiteCredito } = req.body;
 
         const clienteExiste = await prisma.cliente.findUnique({
             where: { cpfCnpj }
@@ -53,10 +53,13 @@ export const criarCliente = async (req, res) => {
                 cpfCnpj,
                 email,
                 telefone,
+                cep,
                 endereco,
+                numero,
+                complemento,
+                bairro,
                 cidade,
                 estado,
-                cep,
                 limiteCredito: limiteCredito || 0
             }
         });
@@ -210,5 +213,63 @@ export const pagarParcela = async (req, res) => {
     } catch (error) {
         console.error('Erro ao pagar parcela:', error);
         res.status(500).json({ error: error.message || 'Erro ao processar pagamento' });
+    }
+};
+
+// Histórico de Compras do Cliente
+export const historicoCompras = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Get cliente with all purchases
+        const cliente = await prisma.cliente.findUnique({
+            where: { id },
+            include: {
+                vendas: {
+                    include: {
+                        loja: { select: { nome: true } }
+                    },
+                    orderBy: { dataVenda: 'desc' }
+                }
+            }
+        });
+
+        if (!cliente) {
+            return res.status(404).json({ error: 'Cliente não encontrado' });
+        }
+
+        // Calculate stats
+        const totalCompras = cliente.vendas.length;
+        const valorTotalGasto = cliente.vendas.reduce(
+            (sum, venda) => sum + parseFloat(venda.total), 0
+        );
+
+        const ultimaCompra = cliente.vendas[0] ? {
+            data: cliente.vendas[0].dataVenda,
+            valor: parseFloat(cliente.vendas[0].total)
+        } : null;
+
+        // Format purchases list
+        const compras = cliente.vendas.map(venda => ({
+            id: venda.id,
+            numero: venda.numero,
+            data: venda.dataVenda,
+            loja: venda.loja?.nome || 'Não especificada',
+            total: parseFloat(venda.total),
+            pagamento: venda.formaPagamento,
+            status: venda.status
+        }));
+
+        res.json({
+            clienteId: id,
+            clienteNome: cliente.nome,
+            totalCompras,
+            valorTotalGasto,
+            ultimaCompra,
+            compras
+        });
+    } catch (error) {
+        console.error('Erro ao buscar histórico:', error);
+        res.status(500).json({ error: 'Erro ao buscar histórico de compras' });
     }
 };
